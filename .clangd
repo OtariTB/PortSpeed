@@ -1,0 +1,11 @@
+CompileFlags:
+  Add:
+    - "-D__wasm__=1"
+    - "-DPROSTREET_PORT=1"
+    - "-DPROSTREET_LREGS=1"
+    - "-Iinclude"
+    - "-I../include"
+    - "-Iruntime"
+    - "-I."
+    - "-I.."
+    - "-Wno-everything"

@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 import struct
 import unittest
 
-from experiments.recomp.guest_memory import GuestMemory, MemoryLoaderError, PESection, parse_pe_sections
+from tools.guest_memory import (
+    GuestMemory,
+    MemoryLoaderError,
+    PESection,
+    parse_pe_sections,
+    IMAGE_BASE,
+    GUEST_MEMORY_LIMIT,
+    HEAP_START,
+    STACK_TOP,
+)
 
 
 def build_synthetic_pe(
@@ -139,6 +150,88 @@ class GuestMemoryTests(unittest.TestCase):
         )
         with self.assertRaises(MemoryLoaderError):
             parse_pe_sections(raw_pe)
+
+    def test_helper_reads_and_writes(self) -> None:
+        mem = GuestMemory(size=4 * 1024 * 1024)
+        mem.write_u8(0x00200000, 0xAB)
+        self.assertEqual(mem.read_u8(0x00200000), 0xAB)
+
+        mem.write_u16(0x00200002, 0x1234)
+        self.assertEqual(mem.read_u16(0x00200002), 0x1234)
+
+        mem.write_u64(0x00200010, 0x0123456789ABCDEF)
+        self.assertEqual(mem.read_u64(0x00200010), 0x0123456789ABCDEF)
+
+        # Floating point
+        struct.pack_into("<f", mem.buffer, 0x00200020, 3.14159)
+        self.assertAlmostEqual(mem.read_f32(0x00200020), 3.14159, places=5)
+
+        struct.pack_into("<d", mem.buffer, 0x00200030, 2.718281828459)
+        self.assertAlmostEqual(mem.read_f64(0x00200030), 2.718281828459, places=10)
+
+        # C-string read
+        mem.write_bytes(0x00200040, b"Hello ProStreet!\x00")
+        self.assertEqual(mem.read_cstring(0x00200040), "Hello ProStreet!")
+
+        # VirtualAlloc on heap
+        h1 = mem.virtual_alloc(0, 0x1000)
+        self.assertEqual(h1, HEAP_START)
+        self.assertEqual(mem.read_bytes(h1, 16), b"\x00" * 16)
+
+
+class TestGuestMemoryIntegration(unittest.TestCase):
+    """Integration test verifying loading genuine nfs.exe PE sections into 1:1 memory."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        workspace = Path(__file__).resolve().parent.parent
+        cfg_path = workspace / "config" / "local.json"
+        if not cfg_path.is_file():
+            raise unittest.SkipTest("Config not found")
+
+        cfg = json.loads(cfg_path.read_text())
+        cls.exe_path = Path(cfg["game_root"]) / "Need For Spped - Pro Street" / "nfs.exe"
+        if not cls.exe_path.is_file():
+            raise unittest.SkipTest("nfs.exe not found")
+
+        cls.raw_exe = cls.exe_path.read_bytes()
+
+    def test_load_real_prostreet_pe_sections(self) -> None:
+        mem = GuestMemory(size=64 * 1024 * 1024)
+        secs = mem.load_pe_sections(self.raw_exe)
+
+        # Verify 10 sections loaded
+        self.assertEqual(len(secs), 10)
+        self.assertEqual(mem.image_base, 0x00400000)
+
+        # Verify .text entry point 0x00828c25 (mainCRTStartup)
+        entry_va = 0x00828c25
+        entry_bytes = mem.read_bytes(entry_va, 5)
+        # In MSVC 8.0 mainCRTStartup: call __security_init_cookie (E8 XX XX XX XX)
+        self.assertEqual(entry_bytes[0], 0xE8)
+
+        # Verify .rdata export name string
+        rdata_slice = mem.read_bytes(0x00967000, 0x000e3000)
+        self.assertIn(b"ProStreet08Release.exe", rdata_slice)
+
+        # Verify C++ static initializers table __xc_a at 0x00967608..0x0096a1f4
+        # Table contains 2,811 4-byte slots with 960 non-null function pointers
+        table_start = 0x00967608
+        table_end = 0x0096a1f4
+        non_null_count = 0
+        for va in range(table_start, table_end, 4):
+            ptr = mem.read_u32(va)
+            if ptr != 0:
+                non_null_count += 1
+                # Must reside inside .text (0x00401000..0x00967000)
+                self.assertTrue(0x00401000 <= ptr < 0x00967000, f"Initializer 0x{ptr:08x} outside .text")
+
+        self.assertEqual(non_null_count, 960, "Must find exactly 960 C++ static initializers")
+
+        # Verify .data BSS region is zeroed
+        # .data raw size is 0x5c6000, virt size 0x5c6000
+        data_sec = next(s for s in secs if s.name == ".data")
+        self.assertEqual(data_sec.virtual_address, 0x00a4a000)
 
 
 if __name__ == "__main__":
