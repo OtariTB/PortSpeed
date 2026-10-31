@@ -61,6 +61,7 @@ bool boot_init_memory(const uint8_t *pe_bytes, size_t pe_size) {
 void boot_bind_iats(void) {
     crt_init_iat();
     win32_init_iat();
+    d3d9_init_iat();
     g_boot_status.stage = BOOT_STAGE_IAT_BOUND;
 }
 

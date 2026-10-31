@@ -13,6 +13,11 @@ from __future__ import annotations
 import struct
 from typing import Callable, Dict, List, Optional, Tuple
 
+from pathlib import Path
+import sys
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 from tools.build_win32_shims import EXE_PATH
 from tools.guest_crt import (
     GuestCRT,
@@ -32,6 +37,7 @@ from tools.guest_initterm import (
 )
 from tools.guest_memory import GuestMemory
 from tools.guest_win32 import GuestWin32
+from tools.guest_d3d9 import GuestD3D9
 
 # ProStreet main() entry point virtual address
 GUEST_MAIN_VA = 0x004AFEE0
@@ -52,6 +58,7 @@ class GuestBoot:
         self.cpu = SimulatedCPU(self.mem)
         self.crt = GuestCRT(self.mem)
         self.win32 = GuestWin32(self.mem, exe_bytes=exe_bytes)
+        self.d3d9 = GuestD3D9(self.mem)
         self.initterm = GuestInitterm(self.mem, self.crt, win32=self.win32)
 
         self.boot_stage = "uninitialized"
@@ -81,9 +88,12 @@ class GuestBoot:
         """Binds CRT and Win32 IAT imports into memory and dispatch table."""
         self.crt.init_iat()
         self.win32.init_iat()
+        self.d3d9.init_iat()
 
         # Merge dtabs
         for k, v in self.crt.dtab.items():
+            self.win32.dtab[k] = v
+        for k, v in self.d3d9.dtab.items():
             self.win32.dtab[k] = v
 
         self.boot_stage = "iat_bound"

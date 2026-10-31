@@ -10,7 +10,26 @@ import struct
 from pathlib import Path
 
 WORKSPACE = Path(__file__).resolve().parents[1]
-EXE_PATH = Path(r"C:\Games\Pro Street\Need For Spped - Pro Street\nfs.exe")
+def _resolve_exe_path() -> Path:
+    cfg_path = WORKSPACE / "config" / "local.json"
+    if cfg_path.is_file():
+        try:
+            import json
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8-sig"))
+            root = Path(cfg.get("game_root", ""))
+            candidates = [
+                root / "Need For Spped - Pro Street" / "nfs.exe",
+                root / "nfs.exe",
+            ]
+            for cand in candidates:
+                if cand.is_file():
+                    return cand
+        except Exception:
+            pass
+    return Path(r"C:\Games\Pro Street\Need For Spped - Pro Street\nfs.exe")
+
+
+EXE_PATH = _resolve_exe_path()
 CRT_H_PATH = WORKSPACE / "runtime" / "crt.h"
 CRT_C_PATH = WORKSPACE / "runtime" / "crt.c"
 

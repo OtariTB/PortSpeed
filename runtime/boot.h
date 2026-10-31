@@ -13,6 +13,7 @@
 #include "memory.h"
 #include "crt.h"
 #include "win32.h"
+#include "d3d9.h"
 #include "initterm.h"
 
 #ifdef __cplusplus
