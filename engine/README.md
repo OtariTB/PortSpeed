@@ -1,0 +1,1 @@
+Reserved for future native engine reconstruction. No vehicle physics, gameplay or engine implementation exists here. The current authored WebAssembly BC3 decoder is `web/assembly/bc3.ts`; it proves a small asset-processing path, not the game engine.

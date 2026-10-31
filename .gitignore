@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+scratch/
+
+# Local configuration & environment paths (contains user-local machine paths)
+config/local.json
+
+# Local research reports and binary logs
+research/local/
+*.log
+
+# Ghidra project databases and logs
+*.gpr
+*.rep/
+*.gzf
+
+# Node / Web / Vite / TypeScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+web/dist/
+build/
+.cache/
+*.tsbuildinfo
+
+# WebAssembly build outputs
+web/public/*.wasm
+*.wasm
+*.wat
+
+# Operating System & IDE artifacts
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Original game assets, executables, packages and decompiled dumps
+# PER AGENTS.MD: Never commit original copyrighted game files or raw binary dumps.
+*.bun
+*.bin
+*.lzc
+*.big
+*.viv
+*.exe
+*.dll
+*.asi
+*.pdb
+*.obj
+*.o
+*.lib
+*.a
+
+# Decoded texture and raster images
+*.dds
+*.tga
+*.bmp
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif

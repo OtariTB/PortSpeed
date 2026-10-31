@@ -1,0 +1,21 @@
+{
+  "name": "prostreet-asset-lab",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "wasm": "asc assembly/bc3.ts --outFile public/bc3.wasm --runtime stub --initialMemory 2 --maximumMemory 1152 --optimize",
+    "dev": "npm run wasm && vite --host 127.0.0.1",
+    "build": "npm run wasm && tsc --noEmit && vite build",
+    "test": "npm run wasm && tsx --test tests/core.test.ts",
+    "test:browser": "node tests/browser.mjs"
+  },
+  "devDependencies": {
+    "assemblyscript": "0.28.20",
+    "vite": "8.3.5",
+    "typescript": "7.0.2",
+    "tsx": "4.20.6",
+    "@types/node": "22.15.30",
+    "playwright": "1.56.1"
+  }
+}

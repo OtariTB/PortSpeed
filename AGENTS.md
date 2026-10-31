@@ -1,0 +1,13 @@
+# Reconnaissance and source protection
+
+- Scope: Phase 3 original vehicle geometry discovery, validated read-only decompression/extraction, and local TypeScript/Vite/WASM/WebGL2 viewing. No gameplay, physics, patches, DRM changes, or original game-code execution. Label incomplete meshes/materials explicitly; never substitute invented vehicle geometry.
+- The entire user-supplied original game directory is protected, including installers and redistributables. Open its files only for reading. Never write, rename, delete, patch, extract into, install into, or change attributes/permissions there.
+- Resolve paths before every write. Authored code and metadata reports belong inside this workspace; proprietary decoded outputs belong only under `%LOCALAPPDATA%/NFSProStreetResearch/phase2` or `phase3`, outside this OneDrive workspace and outside the protected source tree. Refuse overlapping source/output roots. Do not follow source symlinks, junctions, or other reparse points.
+- Never execute game executables, DLLs, installers, autorun entries, or bundled scripts during reconnaissance. Static PE parsing is allowed.
+- Do not copy original assets or executables into the repository. Do not upload, publish, commit, or redistribute original bytes, extracted assets, Ghidra databases, decompiled code, or local binary reports. Gitignore is a convenience, not a security boundary. This workspace is under OneDrive: keep proprietary copies and Ghidra databases out of it; no such copies are needed for reconnaissance.
+- Reports may record relative paths, sizes, hashes, short diagnostic headers, and factual observations locally. Review reports before sharing; keep raw reports ignored.
+- Unknown fields remain unknown. Extensions and signatures are leads, not proof of a complete format. Separate observed facts, documented interpretations, hypotheses, and pending work; cite source, offset, hash, and method where relevant.
+- User-reported v1.1 and a version resource are not proof of an authentic unmodified v1.1 binary. Record hashes and provenance limitations.
+- Ghidra projects/logs must never be placed in the game installation. Review scripts before use; `-readOnly` controls Ghidra persistence and does not sandbox scripts. Do not import original binaries into a synced project directory.
+- Phase 2 authorizes fetching open-source format references and development dependencies. Keep reference checkouts ignored and record revisions/licenses. Local texture decoding is authorized; no uploading or publishing assets. Never claim a check ran if it did not.
+- Validate inspection tools against synthetic fixtures, including malformed/truncated binaries and output-path protection. Report skipped files and read failures explicitly.
