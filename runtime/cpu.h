@@ -41,6 +41,7 @@ typedef double   gm_f64;
 
 #ifdef __wasm__
 #define g_mem ((uint8_t *)0)
+#define GUEST_MEM_READY 1
 #define GSZ ((uint64_t)GUEST_END)
 #define MR8(a)   (*(uint8_t *)(g_mem + (uint32_t)(a)))
 #define MR16(a)  (*(gm_u16  *)(g_mem + (uint32_t)(a)))
@@ -50,6 +51,7 @@ typedef double   gm_f64;
 #define MRF64(a) (*(gm_f64  *)(g_mem + (uint32_t)(a)))
 #else
 extern uint8_t *g_mem;
+#define GUEST_MEM_READY (g_mem != NULL)
 #define GSZ 0x100000000ull
 #define MR8(a)   (*(uint8_t  *)(g_mem + (uint32_t)(a)))
 #define MR16(a)  (*(gm_u16  *)(g_mem + (uint32_t)(a)))

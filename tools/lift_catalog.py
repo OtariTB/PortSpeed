@@ -1119,8 +1119,13 @@ class FunctionLifter:
 
                 # Return instructions
                 if m in ("ret", "retf"):
+                    imm = ins.operands[0].imm if ins.operands else 0
+                    pop_bytes = 4 + imm
                     if enable_lregs:
+                        lines.append(f"    RG_(esp) += {pop_bytes}u;")
                         lines.append("    LR_STORE;")
+                    else:
+                        lines.append(f"    c->esp += {pop_bytes}u;")
                     lines.append("    return;")
                     has_terminal = True
                     continue
@@ -1164,11 +1169,18 @@ class FunctionLifter:
 
                 # Calls
                 if m == "call":
+                    ret_addr = ins.address + ins.size
                     if enable_lregs:
+                        lines.append(f"    PUSH32(0x{ret_addr:08x}u);")
                         lines.append("    LR_STORE;")
+                    else:
+                        lines.append(f"    c->esp -= 4u; MR32(c->esp) = 0x{ret_addr:08x}u;")
                     if ins.operands and ins.operands[0].type == CS_OP_IMM:
                         dest = ins.operands[0].imm
-                        if dest in self.functions:
+                        hooked_vas = {0x0070f640, 0x004afea0, 0x00828b43, 0x00828fee, 0x0082851b}
+                        if dest in hooked_vas:
+                            lines.append(f"    DISPATCH_CALL(c, 0x{dest:08x}u);")
+                        elif dest in self.functions:
                             lines.append(f"    sub_{dest:08x}(c);")
                         else:
                             lines.append(f"    DISPATCH_CALL(c, 0x{dest:08x}u);")

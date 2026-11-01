@@ -1,10 +1,117 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ProStreet · Asset Lab</title></head>
-<body><main>
-<header><span class="eyebrow">PROSTREET / RESEARCH BUILD 003 · PHASE 3A</span><h1>Asset Lab<span>.</span></h1><p>Native browser decoding of original Need for Speed: ProStreet textures and 3D vehicle geometry.</p></header>
-<section class="controls"><label class="file">Open a texture pack<input id="file" type="file" accept=".bun,.bin" disabled></label><label>Texture<select id="texture" disabled><option>Select a file first</option></select></label></section>
-<div class="workspace"><section class="preview"><canvas id="canvas" width="512" height="512" aria-label="Decoded ProStreet texture"></canvas><div class="caption">WEBGL2 <span>·</span> NEAREST FILTER <span>·</span> DXT1 / DXT3 / DXT5 + CIP / JDLZ / HUFF</div></section><aside><h2>Texture record</h2><pre id="metadata">No asset loaded.</pre><p id="status" role="status">Choose GLOBAL/LOADINGTEXTURES.BUN or CARS/240SX/TEXTURES.BIN from your installation.</p><p class="note">Files stay in this browser. Nothing is uploaded or bundled. Supports standalone and compressed CIP/JDLZ/HUFF version-8 packs (DXT1, DXT3, DXT5).</p></aside></div>
-<section class="controls geom-controls"><label class="file">Open GEOMETRY.BIN<input id="geom-file" type="file" accept=".bin" disabled></label><label>Vehicle Part / Preset<select id="geom-part" disabled><option>Select GEOMETRY.BIN first</option></select></label><label class="toggle"><input id="geom-wireframe" type="checkbox" disabled><span>Wireframe overlay</span></label><button id="geom-reset" type="button" class="btn" disabled>Reset Orbit Camera</button></section>
-<div class="workspace geom-workspace"><section class="preview geom-preview"><canvas id="geom-canvas" width="720" height="480" aria-label="Decoded ProStreet 3D vehicle mesh"></canvas><div class="caption">WEBGL2 3D ORBIT VIEWER <span>·</span> DRAG TO ORBIT <span>·</span> SCROLL TO ZOOM <span>·</span> SHORT4N VERTICES</div></section><aside><h2>Geometry record (0x80134010)</h2><pre id="geom-metadata">No geometry loaded.</pre><p id="geom-status" role="status">Choose CARS/240SX/GEOMETRY.BIN from your installation to inspect 3D vehicle meshes.</p><p class="note">No invented geometry or fallback textures. Unresolved global textures (e.g. CARSKIN, CHASSIS, DAMAGE_N in GLOBALB.LZC) and local-origin parts (wheels/seats awaiting VLT attributes) are labeled explicitly.</p></aside></div>
-<footer>STATIC RECOMPILATION + ASSET LAB → CIP / JDLZ / HUFF → WASM DXT1/DXT3/DXT5 → WEBGL2 2D &amp; 3D</footer>
-</main><script type="module" src="/src/main.ts"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0d0d0d">
+  <title>Need for Speed: ProStreet Web</title>
+  <meta name="description" content="Need for Speed: ProStreet (2007) recompiled to WebAssembly for modern browsers with WebGL2/WebGPU graphics, Web Audio, OPFS chunk streaming, and mobile touch controls.">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body data-phase="boot">
+
+<main class="app" id="app">
+  <header class="top-bar">
+    <div class="top-row">
+      <div class="brand">
+        <span class="badge">STATIC RECOMPILATION</span>
+        <h1>NFS PROSTREET <span>WEB</span></h1>
+      </div>
+      <div class="top-actions">
+        <button type="button" class="btn icon-btn" id="fs-btn" aria-label="Toggle Fullscreen">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="bar" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="bar-fill" id="progress-fill"></div>
+    </div>
+  </header>
+
+  <div class="stage-container" id="stage-container">
+    <canvas id="game-canvas" width="1280" height="720" aria-label="ProStreet Game Viewport"></canvas>
+    <div id="touch-overlay" class="touch-overlay-container"></div>
+  </div>
+
+  <section class="ui-panel">
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab-btn active" data-tab="play">Play</button>
+      <button type="button" class="tab-btn" data-tab="controls">Controls</button>
+      <button type="button" class="tab-btn" data-tab="settings">Settings</button>
+      <button type="button" class="tab-btn" data-tab="gamedata">Game Data</button>
+    </div>
+
+    <!-- Play Tab -->
+    <div class="tab-content active" id="tab-play">
+      <div class="status-box">
+        <p class="status-title" id="status-text">Need for Speed: ProStreet Ready</p>
+        <p class="status-sub" id="status-sub">Direct3D 9, DirectSound, and DirectInput subsystems bound.</p>
+      </div>
+      <div class="action-row">
+        <button type="button" class="btn primary-btn" id="play-btn">Launch Game</button>
+        <button type="button" class="btn secondary-btn" id="preload-btn">Preload Assets (OPFS)</button>
+      </div>
+    </div>
+
+    <!-- Controls Tab -->
+    <div class="tab-content" id="tab-controls">
+      <div class="setting-row">
+        <label for="steering-mode">Touch Steering Mode</label>
+        <select id="steering-mode">
+          <option value="buttons">On-Screen Buttons (Left / Right)</option>
+          <option value="stick">Virtual Analog Thumbstick</option>
+          <option value="tilt">Gyroscope Tilt (DeviceOrientation)</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label for="level-horizon">Level Horizon (Tilt Mode)</label>
+        <input type="checkbox" id="level-horizon" checked>
+      </div>
+      <div class="hint-box">
+        <p><strong>Keyboard:</strong> Arrow keys / WASD to Steer, Gas, Brake. Spacebar: Handbrake. Left Shift: Nitrous (NOS). Q / E: Manual Shift.</p>
+        <p><strong>Gamepad:</strong> Standard Xbox / PlayStation controller supported via HTML5 Gamepad API.</p>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="tab-settings">
+      <div class="setting-row">
+        <label for="res-scale">Resolution Scale</label>
+        <select id="res-scale">
+          <option value="1.0">100% Native (1280x720)</option>
+          <option value="0.75">75% Balanced (960x540)</option>
+          <option value="0.5">50% Performance (640x360)</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label for="fps-target">Target Framerate</label>
+        <select id="fps-target">
+          <option value="60">60 FPS</option>
+          <option value="120">120 FPS</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label for="audio-volume">Master Volume</label>
+        <input type="range" id="audio-volume" min="0" max="100" value="85">
+      </div>
+    </div>
+
+    <!-- Game Data Tab -->
+    <div class="tab-content" id="tab-gamedata">
+      <div class="status-box">
+        <p class="status-title">Origin Private File System (OPFS)</p>
+        <p class="status-sub">Game assets stream asynchronously in 1 MiB blocks and persist locally for instant load times.</p>
+      </div>
+      <div class="action-row">
+        <button type="button" class="btn secondary-btn" id="clear-cache-btn">Clear OPFS Cache</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

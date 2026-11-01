@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Forward declaration of authentic game frame tick */
+void sub_006dae50(CPU *c);
+
 static boot_status_t g_boot_status = {
     .stage = BOOT_STAGE_UNINITIALIZED,
     .argc = 0,
@@ -37,7 +40,7 @@ static void hook_dos_header_check(CPU *c) {
 }
 
 static void hook_security_cookie(CPU *c) {
-    if (g_mem != NULL) {
+    if (GUEST_MEM_READY) {
         MR32(0x0100f4ccu) = 0xbb40e64eu;
     }
     c->eax = 0u;
@@ -62,6 +65,8 @@ void boot_bind_iats(void) {
     crt_init_iat();
     win32_init_iat();
     d3d9_init_iat();
+    dinput_init();
+    dsound_init();
     g_boot_status.stage = BOOT_STAGE_IAT_BOUND;
 }
 
@@ -70,7 +75,7 @@ void boot_install_hooks(void) {
     initterm_install_hooks();
 
     /* Write authentic DOS signature 'MZ' at 0x00400000 */
-    if (g_mem != NULL) {
+    if (GUEST_MEM_READY) {
         *(uint16_t *)(g_mem + 0x00400000u) = 0x5a4du;
     }
 
@@ -126,7 +131,7 @@ void boot_setup_arguments(CPU *c, int argc, const char **argv) {
         }
     }
 
-    if (g_mem == NULL) return;
+    if (!GUEST_MEM_READY) return;
 
     /* Write argument strings into guest heap memory */
     uint32_t str_cur = 0x00102000u;
@@ -172,12 +177,12 @@ int boot_invoke_main(CPU *c, bool dry_run) {
 
     if (dry_run) {
         /* 1. Safe mode evaluation */
-        if (g_boot_status.is_safemode && g_mem != NULL) {
+        if (g_boot_status.is_safemode && GUEST_MEM_READY) {
             MR32(GUEST_GLOBAL_SAFEMODE) = 1u;
         }
 
         /* 2. Emulate CreateEventA creation of 4 synchronization events */
-        if (g_mem != NULL) {
+        if (GUEST_MEM_READY) {
             for (int i = 0; i < 4; i++) {
                 c->esp -= 16;
                 MR32(c->esp) = 0u;
@@ -254,4 +259,35 @@ int boot_engine(const uint8_t *pe_bytes, size_t pe_size, int argc, const char **
     boot_setup_arguments(&cpu, argc, argv);
     return boot_invoke_main(&cpu, dry_run);
 }
+
+#if defined(__wasm__) || defined(__EMSCRIPTEN__)
+PROSTREET_WASM_EXPORT
+int prostreet_load_pe(uint32_t pe_va, uint32_t pe_size) {
+    if (pe_va == 0 || pe_size == 0) return -1;
+    const uint8_t *raw = (const uint8_t *)(g_mem + pe_va);
+    return guest_memory_load_pe(raw, (size_t)pe_size) ? 0 : -2;
+}
+
+PROSTREET_WASM_EXPORT
+int prostreet_main(int argc, const char **argv) {
+    return boot_engine(NULL, 0, argc, argv, false);
+}
+
+PROSTREET_WASM_EXPORT
+uint8_t *prostreet_get_guest_memory(void) {
+    return g_mem;
+}
+
+PROSTREET_WASM_EXPORT
+int prostreet_tick(void) {
+    static CPU s_tick_cpu;
+    static bool s_tick_inited = false;
+    if (!s_tick_inited) {
+        guest_cpu_init(&s_tick_cpu, 0x006dae50u);
+        s_tick_inited = true;
+    }
+    sub_006dae50(&s_tick_cpu);
+    return 0;
+}
+#endif
 

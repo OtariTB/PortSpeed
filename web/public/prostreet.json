@@ -1,0 +1,11 @@
+{
+  "pages": 16384,
+  "maxPages": 65536,
+  "guestEnd": 671088640,
+  "size": 50646883,
+  "opt": "-O3",
+  "toolchain": "wasi-sdk",
+  "shards": 32,
+  "functions": 31995,
+  "compiledAt": "2026-11-01T11:26:17Z"
+}

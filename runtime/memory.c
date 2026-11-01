@@ -199,7 +199,7 @@ void guest_cpu_init(struct CPU *c, uint32_t entry_point) {
     c->fs_base = GUEST_TEB_ADDR;
 
     /* Write termination sentinel on stack at [ESP] */
-    if (g_mem != NULL) {
+    if (GUEST_MEM_READY) {
         MR32(c->esp) = 0xDEADF00Du;
 
         /* Initialize Win32 TEB and TLS layout at GUEST_TEB_ADDR (0x00100000) */

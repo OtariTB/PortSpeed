@@ -31,6 +31,34 @@ from tools.guest_d3d9 import (
     encode_present,
     encode_set_render_state,
     encode_set_viewport,
+    decode_create_vertex_buffer,
+    decode_destroy_vertex_buffer,
+    decode_set_stream_source,
+    decode_update_vertex_buffer,
+    encode_create_vertex_buffer,
+    encode_destroy_vertex_buffer,
+    encode_set_stream_source,
+    encode_update_vertex_buffer,
+    decode_create_index_buffer,
+    decode_create_texture,
+    decode_create_vertex_declaration,
+    decode_destroy_index_buffer,
+    decode_set_indices,
+    decode_set_sampler_state,
+    decode_set_texture,
+    decode_set_vertex_declaration,
+    decode_update_index_buffer,
+    decode_update_texture,
+    encode_create_index_buffer,
+    encode_create_texture,
+    encode_create_vertex_declaration,
+    encode_destroy_index_buffer,
+    encode_set_indices,
+    encode_set_sampler_state,
+    encode_set_texture,
+    encode_set_vertex_declaration,
+    encode_update_index_buffer,
+    encode_update_texture,
 )
 
 WORKSPACE = Path(__file__).resolve().parent.parent
@@ -50,6 +78,20 @@ class TestD3D9CmdUnit(unittest.TestCase):
         self.assertIn("d3d9_cmd_header_t", content)
         self.assertIn("D3DCMD_DRAW_INDEXED_PRIMITIVE", content)
         self.assertIn("d3d9_ring_init", content)
+        self.assertIn("D3DCMD_CREATE_VERTEX_BUFFER", content)
+        self.assertIn("D3DCMD_UPDATE_VERTEX_BUFFER", content)
+        self.assertIn("D3DCMD_SET_STREAM_SOURCE", content)
+        self.assertIn("D3DCMD_DESTROY_VERTEX_BUFFER", content)
+        self.assertIn("d3d9_cmd_update_vertex_buffer_t", content)
+        self.assertIn("d3d9_cmd_destroy_vertex_buffer_t", content)
+        self.assertIn("D3DCMD_UPDATE_INDEX_BUFFER", content)
+        self.assertIn("D3DCMD_DESTROY_INDEX_BUFFER", content)
+        self.assertIn("D3DCMD_CREATE_VERTEX_DECLARATION", content)
+        self.assertIn("d3d9_cmd_update_index_buffer_t", content)
+        self.assertIn("d3d9_cmd_destroy_index_buffer_t", content)
+        self.assertIn("d3d9_vertex_element_t", content)
+        self.assertIn("d3d9_cmd_create_vertex_declaration_t", content)
+        self.assertIn("d3d9_cmd_set_vertex_declaration_t", content)
 
     def test_ring_header_packing_and_size(self) -> None:
         hdr = D3DRingHeader(capacity=1024)
@@ -132,6 +174,104 @@ class TestD3D9CmdUnit(unittest.TestCase):
         self.assertEqual(decoded["src_rect_y"], 0)
         self.assertEqual(decoded["src_rect_w"], 1280)
         self.assertEqual(decoded["src_rect_h"], 720)
+
+    def test_command_vertex_buffer_lifecycle_serialization(self) -> None:
+        # 1. CREATE_VERTEX_BUFFER (20 bytes)
+        create_payload = encode_create_vertex_buffer(
+            buffer_id=7, length=4096, usage=0x208, fvf=0x142, pool=0
+        )
+        self.assertEqual(len(create_payload), 20)
+        dec_create = decode_create_vertex_buffer(create_payload)
+        self.assertEqual(dec_create["buffer_id"], 7)
+        self.assertEqual(dec_create["length"], 4096)
+        self.assertEqual(dec_create["usage"], 0x208)
+        self.assertEqual(dec_create["fvf"], 0x142)
+        self.assertEqual(dec_create["pool"], 0)
+
+        # 2. UPDATE_VERTEX_BUFFER (12 bytes header + raw data)
+        raw_verts = b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c"
+        update_payload = encode_update_vertex_buffer(buffer_id=7, offset=64, data=raw_verts)
+        self.assertEqual(len(update_payload), 12 + len(raw_verts))
+        dec_update = decode_update_vertex_buffer(update_payload)
+        self.assertEqual(dec_update["buffer_id"], 7)
+        self.assertEqual(dec_update["offset"], 64)
+        self.assertEqual(dec_update["size"], 12)
+        self.assertEqual(dec_update["data"], raw_verts)
+
+        # 3. SET_STREAM_SOURCE (16 bytes)
+        stream_payload = encode_set_stream_source(
+            stream_number=0, buffer_id=7, offset=32, stride=24
+        )
+        self.assertEqual(len(stream_payload), 16)
+        dec_stream = decode_set_stream_source(stream_payload)
+        self.assertEqual(dec_stream["stream_number"], 0)
+        self.assertEqual(dec_stream["buffer_id"], 7)
+        self.assertEqual(dec_stream["offset"], 32)
+        self.assertEqual(dec_stream["stride"], 24)
+
+        # 4. DESTROY_VERTEX_BUFFER (4 bytes)
+        destroy_payload = encode_destroy_vertex_buffer(buffer_id=7)
+        self.assertEqual(len(destroy_payload), 4)
+        dec_destroy = decode_destroy_vertex_buffer(destroy_payload)
+        self.assertEqual(dec_destroy["buffer_id"], 7)
+
+    def test_command_index_buffer_decl_texture_sampler_serialization(self) -> None:
+        # 1. Index Buffer lifecycle
+        ib_create = encode_create_index_buffer(buffer_id=12, length=2048, usage=8, fmt=101, pool=0)
+        self.assertEqual(len(ib_create), 20)
+        dec_ib = decode_create_index_buffer(ib_create)
+        self.assertEqual(dec_ib["buffer_id"], 12)
+        self.assertEqual(dec_ib["length"], 2048)
+        self.assertEqual(dec_ib["format"], 101)
+
+        ib_data = b"\x00\x00\x01\x00\x02\x00"
+        ib_update = encode_update_index_buffer(buffer_id=12, offset=0, data=ib_data)
+        dec_ib_upd = decode_update_index_buffer(ib_update)
+        self.assertEqual(dec_ib_upd["buffer_id"], 12)
+        self.assertEqual(dec_ib_upd["size"], 6)
+        self.assertEqual(dec_ib_upd["data"], ib_data)
+
+        ib_set = encode_set_indices(buffer_id=12)
+        self.assertEqual(decode_set_indices(ib_set)["buffer_id"], 12)
+
+        ib_destroy = encode_destroy_index_buffer(buffer_id=12)
+        self.assertEqual(decode_destroy_index_buffer(ib_destroy)["buffer_id"], 12)
+
+        # 2. Vertex Declaration lifecycle
+        elems = [
+            (0, 0, 2, 0, 0, 0),   # stream 0, offset 0, FLOAT3, POSITION0
+            (0, 12, 4, 0, 10, 0), # stream 0, offset 12, D3DCOLOR, COLOR0
+        ]
+        decl_create = encode_create_vertex_declaration(decl_id=3, elements=elems)
+        self.assertEqual(len(decl_create), 8 + 16)
+        dec_decl = decode_create_vertex_declaration(decl_create)
+        self.assertEqual(dec_decl["decl_id"], 3)
+        self.assertEqual(dec_decl["element_count"], 2)
+        self.assertEqual(dec_decl["elements"][0]["type"], 2)
+        self.assertEqual(dec_decl["elements"][1]["offset"], 12)
+
+        decl_set = encode_set_vertex_declaration(decl_id=3)
+        self.assertEqual(decode_set_vertex_declaration(decl_set)["decl_id"], 3)
+
+        # 3. Texture & Sampler lifecycle
+        tex_create = encode_create_texture(texture_id=5, width=64, height=64, levels=1, usage=0, fmt=21, pool=1)
+        self.assertEqual(len(tex_create), 28)
+        dec_tex = decode_create_texture(tex_create)
+        self.assertEqual(dec_tex["texture_id"], 5)
+        self.assertEqual(dec_tex["width"], 64)
+        self.assertEqual(dec_tex["format"], 21)
+
+        tex_pixels = b"\xff\x00\x80\xff" * 4
+        tex_upd = encode_update_texture(texture_id=5, level=0, pitch=8, width=2, height=2, data=tex_pixels)
+        dec_tex_upd = decode_update_texture(tex_upd)
+        self.assertEqual(dec_tex_upd["texture_id"], 5)
+        self.assertEqual(dec_tex_upd["data"], tex_pixels)
+
+        tex_bind = encode_set_texture(stage=0, texture_id=5)
+        self.assertEqual(decode_set_texture(tex_bind), {"stage": 0, "texture_id": 5})
+
+        samp = encode_set_sampler_state(sampler=0, stype=5, value=2)
+        self.assertEqual(decode_set_sampler_state(samp), {"sampler": 0, "type": 5, "value": 2})
 
     def test_ring_buffer_fifo_lifecycle(self) -> None:
         # Small ring buffer (128 bytes payload)

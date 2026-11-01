@@ -35,6 +35,72 @@ graph TD
 
 ---
 
+---
+
+## Current Status & Handover Instructions (November 2026)
+
+> [!IMPORTANT]
+> **Engineering Status & Known Failure Points Under Fix**
+> This section documents the failure points encountered during recent testing, the exact root causes, what was implemented to fix them, and the recommended approach for the next developer taking over.
+
+### 1. What Failed & Root Causes
+
+1. **Static Initializer Boot Crash (`RuntimeError: memory access out of bounds`):**
+   * **Failure Point:** During static C++ initializers (`initterm_run_cpp_constructors` -> `sub_0095b650`), the engine invokes `sub_00401000` (vector constructor iterator) passing a constructor pointer at `0x006f8d60` (`mov eax, ecx; mov [eax+0x40], 0; ...; ret`).
+   * **Root Cause:** `0x006f8d60` was passed as an immediate data pointer (`push 0x6f8d60`) rather than a direct `call`, so it was omitted from the 31,995 static catalog functions. When `DISPATCH_CALL` was called for `0x006f8d60`, it hit an unhandled stub that did nothing and didn't pop the return address. Over 50 array iterations, this drifted `c->esp` by 200 bytes, corrupting saved registers (`esi`, `ebp`, `ebx`, `edi`) and causing an out-of-bounds memory access.
+   * **Solution Implemented:** Added `runtime/genexec.c` (ported from upstream NFSU2), a lightweight x86 interpreter fallback that executes unlifted functions, callbacks, and runtime-generated code. In `gen/fntab.c`, `dispatch_indirect` now calls `run_generated(c, addr)` on fallback.
+
+2. **Stale Web Bundle & Desktop Touch Controls Visible:**
+   * **Failure Point:** Browser showed a black screen with mobile touch overlays on desktop PC and a "Race Active" button.
+   * **Root Cause:** `tools/serve.py` serves from `web/dist/` if it exists. `web/dist/` contained an outdated build with a temporary vehicle simulation loop and touch overlays that did not check pointer type.
+   * **Solution Implemented:** Updated `web/src/touch.ts` and `web/src/style.css` so touch overlays are strictly hidden unless `matchMedia('(pointer: coarse)').matches` is true (`html[data-touch]`). Removed synthetic `sim.step(dt)` loops from `web/src/app.ts` so frames are driven solely by the recompiled engine loop (`prostreet_tick()`).
+
+3. **6,000+ Spurious Git Changes:**
+   * **Root Cause:** The `work/` directory contained the downloaded WASI SDK compiler toolchain (7,004 files), and `.build_cache/` contained intermediate `.o` object files. Both were missing from `.gitignore`.
+   * **Solution Implemented:** Added `work/`, `.build_cache/`, and scratch files to `.gitignore`. Git status is now clean and tracks only genuine source code.
+
+---
+
+### 2. How to Approach & Complete This
+
+To continue from this state:
+
+#### Step 1: Compile the WASM Engine
+Run the multi-threaded WASM compilation script from `PROSTREET/PortSpeed`:
+```powershell
+cd "PROSTREET\PortSpeed"
+python tools\build_wasm.py -j 4
+```
+This compiles all 32 shards, `gen/fntab.c`, and the runtime files (including `runtime/genexec.c`), producing `web/public/prostreet.wasm` (~48 MB) and `prostreet.json`.
+
+#### Step 2: Rebuild the Web Client Bundle
+Recompile the TypeScript frontend and sync the WASM artifacts into `web/dist`:
+```powershell
+cd web
+npm run build
+copy /y public\prostreet.wasm dist\
+copy /y public\prostreet.json dist\
+cd ..
+```
+
+#### Step 3: Run the Local Game & Streaming Server
+Start the local server (points to `C:\Games\Pro Street\Need For Spped - Pro Street`):
+```powershell
+# Using the root batch file:
+.\start.bat
+
+# Or directly:
+python tools\serve.py --port 8080
+```
+
+#### Step 4: Verify in Browser
+Open `http://127.0.0.1:8080/` in Chrome or Edge:
+* Verify that touch control overlays do **not** appear on desktop.
+* Click **Launch Game** to trigger `prostreet_load_pe` and `prostreet_main`.
+* Check DevTools Console (`F12`) to confirm static initializers complete without `RuntimeError` and D3D9 commands stream to the WebGL2 canvas.
+
+---
+
 ## Master Engineering Roadmap & Milestone Status
 
 > [!NOTE]

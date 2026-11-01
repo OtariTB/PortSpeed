@@ -79,6 +79,11 @@ class D3DCommandType(enum.IntEnum):
     SET_VS_CONSTANTS = 22
     SET_PS_CONSTANTS = 23
     SET_SCISSOR_RECT = 24
+    UPDATE_VERTEX_BUFFER = 25
+    DESTROY_VERTEX_BUFFER = 26
+    UPDATE_INDEX_BUFFER = 27
+    DESTROY_INDEX_BUFFER = 28
+    CREATE_VERTEX_DECLARATION = 29
 
 
 @dataclass
@@ -307,6 +312,220 @@ def encode_present(x: int = 0, y: int = 0, w: int = 0, h: int = 0) -> bytes:
 def decode_present(payload: bytes) -> Dict[str, Any]:
     x, y, w, h = struct.unpack("<4I", payload[:16])
     return {"src_rect_x": x, "src_rect_y": y, "src_rect_w": w, "src_rect_h": h}
+
+
+def encode_create_vertex_buffer(
+    buffer_id: int, length: int, usage: int = 0, fvf: int = 0, pool: int = 0
+) -> bytes:
+    return struct.pack("<5I", buffer_id, length, usage, fvf, pool)
+
+
+def decode_create_vertex_buffer(payload: bytes) -> Dict[str, Any]:
+    buffer_id, length, usage, fvf, pool = struct.unpack("<5I", payload[:20])
+    return {
+        "buffer_id": buffer_id,
+        "length": length,
+        "usage": usage,
+        "fvf": fvf,
+        "pool": pool,
+    }
+
+
+def encode_update_vertex_buffer(buffer_id: int, offset: int, data: bytes) -> bytes:
+    return struct.pack("<3I", buffer_id, offset, len(data)) + data
+
+
+def decode_update_vertex_buffer(payload: bytes) -> Dict[str, Any]:
+    buffer_id, offset, size = struct.unpack("<3I", payload[:12])
+    data = payload[12 : 12 + size]
+    return {
+        "buffer_id": buffer_id,
+        "offset": offset,
+        "size": size,
+        "data": data,
+    }
+
+
+def encode_set_stream_source(
+    stream_number: int, buffer_id: int, offset: int, stride: int
+) -> bytes:
+    return struct.pack("<4I", stream_number, buffer_id, offset, stride)
+
+
+def decode_set_stream_source(payload: bytes) -> Dict[str, Any]:
+    stream_number, buffer_id, offset, stride = struct.unpack("<4I", payload[:16])
+    return {
+        "stream_number": stream_number,
+        "buffer_id": buffer_id,
+        "offset": offset,
+        "stride": stride,
+    }
+
+
+def encode_destroy_vertex_buffer(buffer_id: int) -> bytes:
+    return struct.pack("<I", buffer_id)
+
+
+def decode_destroy_vertex_buffer(payload: bytes) -> Dict[str, Any]:
+    (buffer_id,) = struct.unpack("<I", payload[:4])
+    return {"buffer_id": buffer_id}
+
+
+def encode_create_index_buffer(
+    buffer_id: int, length: int, usage: int = 0, fmt: int = 101, pool: int = 0
+) -> bytes:
+    return struct.pack("<5I", buffer_id, length, usage, fmt, pool)
+
+
+def decode_create_index_buffer(payload: bytes) -> Dict[str, Any]:
+    buffer_id, length, usage, fmt, pool = struct.unpack("<5I", payload[:20])
+    return {
+        "buffer_id": buffer_id,
+        "length": length,
+        "usage": usage,
+        "format": fmt,
+        "pool": pool,
+    }
+
+
+def encode_update_index_buffer(buffer_id: int, offset: int, data: bytes) -> bytes:
+    return struct.pack("<3I", buffer_id, offset, len(data)) + data
+
+
+def decode_update_index_buffer(payload: bytes) -> Dict[str, Any]:
+    buffer_id, offset, size = struct.unpack("<3I", payload[:12])
+    data = payload[12 : 12 + size]
+    return {
+        "buffer_id": buffer_id,
+        "offset": offset,
+        "size": size,
+        "data": data,
+    }
+
+
+def encode_set_indices(buffer_id: int) -> bytes:
+    return struct.pack("<I", buffer_id)
+
+
+def decode_set_indices(payload: bytes) -> Dict[str, Any]:
+    (buffer_id,) = struct.unpack("<I", payload[:4])
+    return {"buffer_id": buffer_id}
+
+
+def encode_destroy_index_buffer(buffer_id: int) -> bytes:
+    return struct.pack("<I", buffer_id)
+
+
+def decode_destroy_index_buffer(payload: bytes) -> Dict[str, Any]:
+    (buffer_id,) = struct.unpack("<I", payload[:4])
+    return {"buffer_id": buffer_id}
+
+
+def encode_create_vertex_declaration(
+    decl_id: int, elements: List[Tuple[int, int, int, int, int, int]]
+) -> bytes:
+    out = [struct.pack("<2I", decl_id, len(elements))]
+    for stream, offset, dtype, method, usage, usage_index in elements:
+        out.append(struct.pack("<2H4B", stream, offset, dtype, method, usage, usage_index))
+    return b"".join(out)
+
+
+def decode_create_vertex_declaration(payload: bytes) -> Dict[str, Any]:
+    decl_id, count = struct.unpack("<2I", payload[:8])
+    elements = []
+    for i in range(count):
+        base = 8 + i * 8
+        stream, offset, dtype, method, usage, usage_index = struct.unpack(
+            "<2H4B", payload[base : base + 8]
+        )
+        elements.append(
+            {
+                "stream": stream,
+                "offset": offset,
+                "type": dtype,
+                "method": method,
+                "usage": usage,
+                "usage_index": usage_index,
+            }
+        )
+    return {"decl_id": decl_id, "element_count": count, "elements": elements}
+
+
+def encode_set_vertex_declaration(decl_id: int) -> bytes:
+    return struct.pack("<I", decl_id)
+
+
+def decode_set_vertex_declaration(payload: bytes) -> Dict[str, Any]:
+    (decl_id,) = struct.unpack("<I", payload[:4])
+    return {"decl_id": decl_id}
+
+
+def encode_create_texture(
+    texture_id: int,
+    width: int,
+    height: int,
+    levels: int = 1,
+    usage: int = 0,
+    fmt: int = 21,
+    pool: int = 0,
+) -> bytes:
+    return struct.pack("<7I", texture_id, width, height, levels, usage, fmt, pool)
+
+
+def decode_create_texture(payload: bytes) -> Dict[str, Any]:
+    texture_id, width, height, levels, usage, fmt, pool = struct.unpack("<7I", payload[:28])
+    return {
+        "texture_id": texture_id,
+        "width": width,
+        "height": height,
+        "levels": levels,
+        "usage": usage,
+        "format": fmt,
+        "pool": pool,
+    }
+
+
+def encode_update_texture(
+    texture_id: int,
+    level: int,
+    pitch: int,
+    width: int,
+    height: int,
+    data: bytes,
+) -> bytes:
+    return struct.pack("<6I", texture_id, level, pitch, len(data), width, height) + data
+
+
+def decode_update_texture(payload: bytes) -> Dict[str, Any]:
+    texture_id, level, pitch, data_bytes, width, height = struct.unpack("<6I", payload[:24])
+    data = payload[24 : 24 + data_bytes]
+    return {
+        "texture_id": texture_id,
+        "level": level,
+        "pitch": pitch,
+        "data_bytes": data_bytes,
+        "width": width,
+        "height": height,
+        "data": data,
+    }
+
+
+def encode_set_texture(stage: int, texture_id: int) -> bytes:
+    return struct.pack("<2I", stage, texture_id)
+
+
+def decode_set_texture(payload: bytes) -> Dict[str, Any]:
+    stage, texture_id = struct.unpack("<2I", payload[:8])
+    return {"stage": stage, "texture_id": texture_id}
+
+
+def encode_set_sampler_state(sampler: int, stype: int, value: int) -> bytes:
+    return struct.pack("<3I", sampler, stype, value)
+
+
+def decode_set_sampler_state(payload: bytes) -> Dict[str, Any]:
+    sampler, stype, value = struct.unpack("<3I", payload[:12])
+    return {"sampler": sampler, "type": stype, "value": value}
 
 
 # ---------------------------------------------------------------------------

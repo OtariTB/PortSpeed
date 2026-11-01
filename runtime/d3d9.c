@@ -88,7 +88,7 @@ static bool is_format_supported(uint32_t fmt) {
  * Ring Buffer Helpers
  * -------------------------------------------------------------------------- */
 static bool emit_cmd(uint16_t cmd_type, const void *payload, uint32_t payload_bytes) {
-    if (g_mem == NULL) return false;
+    if (!GUEST_MEM_READY) return false;
     d3d9_ring_header_t *hdr = (d3d9_ring_header_t *)(g_mem + D3D9_RING_BUFFER_VA);
     if (hdr->magic != D3D9_RING_MAGIC) return false;
 
@@ -150,7 +150,7 @@ void d3d9_shim_Direct3DCreate9(CPU *c) {
     s_d3d9_ref_count = 1u;
     s_d3d9_active = true;
 
-    if (g_mem != NULL) {
+    if (GUEST_MEM_READY) {
         /* Write instance vtable pointer and reference count into heap */
         MR32(D3D9_INSTANCE_VA) = D3D9_VTABLE_VA;
         MR32(D3D9_INSTANCE_VA + 4u) = s_d3d9_ref_count;
@@ -175,13 +175,13 @@ void d3d9_shim_QueryInterface(CPU *c) {
         return;
     }
 
-    if (pRiid != 0 && g_mem != NULL) {
+    if (pRiid != 0 && GUEST_MEM_READY) {
         const uint8_t *riid = g_mem + pRiid;
         if (memcmp(riid, s_guid_iunknown, 16) == 0 ||
             memcmp(riid, s_guid_idirect3d9, 16) == 0) {
             MR32(ppvObj) = pThis;
             s_d3d9_ref_count++;
-            if (g_mem != NULL) {
+            if (GUEST_MEM_READY) {
                 MR32(pThis + 4u) = s_d3d9_ref_count;
             }
             c->eax = D3D_OK;
@@ -199,7 +199,7 @@ void d3d9_shim_AddRef(CPU *c) {
     c->esp += 4;
 
     s_d3d9_ref_count++;
-    if (g_mem != NULL && pThis != 0) {
+    if (GUEST_MEM_READY && pThis != 0) {
         MR32(pThis + 4u) = s_d3d9_ref_count;
     }
     c->eax = s_d3d9_ref_count;
@@ -216,7 +216,7 @@ void d3d9_shim_Release(CPU *c) {
     if (s_d3d9_ref_count == 0) {
         s_d3d9_active = false;
     }
-    if (g_mem != NULL && pThis != 0) {
+    if (GUEST_MEM_READY && pThis != 0) {
         MR32(pThis + 4u) = s_d3d9_ref_count;
     }
     c->eax = s_d3d9_ref_count;
@@ -240,7 +240,7 @@ void d3d9_shim_GetAdapterIdentifier(CPU *c) {
     uint32_t pId     = MR32(c->esp + 12u);
     c->esp += 16;
 
-    if (adapter != 0 || pId == 0 || g_mem == NULL) {
+    if (adapter != 0 || pId == 0 || !GUEST_MEM_READY) {
         c->eax = D3DERR_INVALIDCALL;
         return;
     }
@@ -301,7 +301,7 @@ void d3d9_shim_EnumAdapterModes(CPU *c) {
     uint32_t pMode   = MR32(c->esp + 16u);
     c->esp += 20;
 
-    if (adapter != 0 || pMode == 0 || mode >= 4 || g_mem == NULL) {
+    if (adapter != 0 || pMode == 0 || mode >= 4 || !GUEST_MEM_READY) {
         c->eax = D3DERR_INVALIDCALL;
         return;
     }
@@ -320,7 +320,7 @@ void d3d9_shim_GetAdapterDisplayMode(CPU *c) {
     uint32_t pMode   = MR32(c->esp + 8u);
     c->esp += 12;
 
-    if (adapter != 0 || pMode == 0 || g_mem == NULL) {
+    if (adapter != 0 || pMode == 0 || !GUEST_MEM_READY) {
         c->eax = D3DERR_INVALIDCALL;
         return;
     }
@@ -367,12 +367,12 @@ void d3d9_shim_CheckDeviceMultiSampleType(CPU *c) {
     c->esp += 28;
 
     if (adapter == 0 && ms_type == 0u) {
-        if (pQuality != 0 && g_mem != NULL) {
+        if (pQuality != 0 && GUEST_MEM_READY) {
             MR32(pQuality) = 1u;
         }
         c->eax = D3D_OK;
     } else {
-        if (pQuality != 0 && g_mem != NULL) {
+        if (pQuality != 0 && GUEST_MEM_READY) {
             MR32(pQuality) = 0u;
         }
         c->eax = D3DERR_NOTAVAILABLE;
@@ -411,7 +411,7 @@ void d3d9_shim_GetDeviceCaps(CPU *c) {
     uint32_t pCaps   = MR32(c->esp + 12u);
     c->esp += 16;
 
-    if (adapter != 0 || pCaps == 0 || g_mem == NULL) {
+    if (adapter != 0 || pCaps == 0 || !GUEST_MEM_READY) {
         c->eax = D3DERR_INVALIDCALL;
         return;
     }
@@ -484,7 +484,7 @@ void d3d9_shim_CreateDevice(CPU *c) {
     s_device_ref_count = 1u;
     s_device_active = true;
 
-    if (g_mem != NULL) {
+    if (GUEST_MEM_READY) {
         MR32(D3D9_DEVICE_INSTANCE_VA) = D3D9_DEVICE_VTABLE_VA;
         MR32(D3D9_DEVICE_INSTANCE_VA + 4u) = s_device_ref_count;
         MR32(ppDevice) = D3D9_DEVICE_INSTANCE_VA;
@@ -521,13 +521,13 @@ void d3d9_dev_shim_QueryInterface(CPU *c) {
         return;
     }
 
-    if (pRiid != 0 && g_mem != NULL) {
+    if (pRiid != 0 && GUEST_MEM_READY) {
         const uint8_t *riid = g_mem + pRiid;
         if (memcmp(riid, s_guid_iunknown, 16) == 0 ||
             memcmp(riid, s_guid_idirect3ddevice9, 16) == 0) {
             MR32(ppvObj) = pThis;
             s_device_ref_count++;
-            if (g_mem != NULL) MR32(pThis + 4u) = s_device_ref_count;
+            if (GUEST_MEM_READY) MR32(pThis + 4u) = s_device_ref_count;
             c->eax = D3D_OK;
             return;
         }
@@ -541,7 +541,7 @@ void d3d9_dev_shim_AddRef(CPU *c) {
     uint32_t pThis = MR32(c->esp);
     c->esp += 4;
     s_device_ref_count++;
-    if (g_mem != NULL && pThis != 0) MR32(pThis + 4u) = s_device_ref_count;
+    if (GUEST_MEM_READY && pThis != 0) MR32(pThis + 4u) = s_device_ref_count;
     c->eax = s_device_ref_count;
 }
 
@@ -550,7 +550,7 @@ void d3d9_dev_shim_Release(CPU *c) {
     c->esp += 4;
     if (s_device_ref_count > 0) s_device_ref_count--;
     if (s_device_ref_count == 0) s_device_active = false;
-    if (g_mem != NULL && pThis != 0) MR32(pThis + 4u) = s_device_ref_count;
+    if (GUEST_MEM_READY && pThis != 0) MR32(pThis + 4u) = s_device_ref_count;
     c->eax = s_device_ref_count;
 }
 
@@ -572,7 +572,7 @@ void d3d9_dev_shim_EvictManagedResources(CPU *c) {
 void d3d9_dev_shim_GetDirect3D(CPU *c) {
     uint32_t ppD3D = MR32(c->esp + 4u);
     c->esp += 8;
-    if (ppD3D != 0 && g_mem != NULL) {
+    if (ppD3D != 0 && GUEST_MEM_READY) {
         MR32(ppD3D) = D3D9_INSTANCE_VA;
         s_d3d9_ref_count++;
         MR32(D3D9_INSTANCE_VA + 4u) = s_d3d9_ref_count;
@@ -587,7 +587,7 @@ void d3d9_dev_shim_GetDeviceCaps(CPU *c) {
 void d3d9_dev_shim_GetDisplayMode(CPU *c) {
     uint32_t pMode = MR32(c->esp + 8u);
     c->esp += 12;
-    if (pMode != 0 && g_mem != NULL) {
+    if (pMode != 0 && GUEST_MEM_READY) {
         MR32(pMode + 0u) = 1280u;
         MR32(pMode + 4u) = 720u;
         MR32(pMode + 8u) = 60u;
@@ -599,7 +599,7 @@ void d3d9_dev_shim_GetDisplayMode(CPU *c) {
 void d3d9_dev_shim_GetCreationParameters(CPU *c) {
     uint32_t pParams = MR32(c->esp + 4u);
     c->esp += 8;
-    if (pParams != 0 && g_mem != NULL) {
+    if (pParams != 0 && GUEST_MEM_READY) {
         MR32(pParams + 0u) = 0u; /* AdapterOrdinal = 0 */
         MR32(pParams + 4u) = 1u; /* DeviceType = D3DDEVTYPE_HAL */
         MR32(pParams + 8u) = 0x00010001u; /* hFocusWindow */
@@ -618,7 +618,7 @@ void d3d9_dev_shim_GetNumberOfSwapChains(CPU *c) { c->esp += 4; c->eax = 1u; }
 void d3d9_dev_shim_Reset(CPU *c) {
     uint32_t pPP = MR32(c->esp + 4u);
     c->esp += 8;
-    if (pPP != 0 && g_mem != NULL) {
+    if (pPP != 0 && GUEST_MEM_READY) {
         s_viewport.width = MR32(pPP + 0u) ? MR32(pPP + 0u) : 1280u;
         s_viewport.height = MR32(pPP + 4u) ? MR32(pPP + 4u) : 720u;
         emit_cmd(D3DCMD_SET_VIEWPORT, &s_viewport, sizeof(s_viewport));
@@ -631,13 +631,13 @@ void d3d9_dev_shim_Present(CPU *c) {
     c->esp += 20;
 
     d3d9_cmd_present_t pres = { 0, 0, s_viewport.width, s_viewport.height };
-    if (pSrc != 0 && g_mem != NULL) {
+    if (pSrc != 0 && GUEST_MEM_READY) {
         pres.src_rect_w = MR32(pSrc + 8u);
         pres.src_rect_h = MR32(pSrc + 12u);
     }
     emit_cmd(D3DCMD_PRESENT, &pres, sizeof(pres));
 
-    if (g_mem != NULL) {
+    if (GUEST_MEM_READY) {
         d3d9_ring_header_t *hdr = (d3d9_ring_header_t *)(g_mem + D3D9_RING_BUFFER_VA);
         if (hdr->magic == D3D9_RING_MAGIC) hdr->frame_index++;
     }
@@ -647,7 +647,7 @@ void d3d9_dev_shim_Present(CPU *c) {
 void d3d9_dev_shim_GetBackBuffer(CPU *c) {
     uint32_t ppBack = MR32(c->esp + 16u);
     c->esp += 20;
-    if (ppBack != 0 && g_mem != NULL) {
+    if (ppBack != 0 && GUEST_MEM_READY) {
         MR32(ppBack) = 0x02004000u; /* Synthetic surface handle */
     }
     c->eax = D3D_OK;
@@ -668,7 +668,7 @@ void d3d9_dev_shim_CreateTexture(CPU *c) {
     uint32_t ppTex  = MR32(c->esp + 28u);
     c->esp += 36;
 
-    if (ppTex == 0 || g_mem == NULL) {
+    if (ppTex == 0 || !GUEST_MEM_READY) {
         c->eax = D3DERR_INVALIDCALL;
         return;
     }
@@ -701,7 +701,7 @@ void d3d9_dev_shim_CreateVertexBuffer(CPU *c) {
     uint32_t ppVB   = MR32(c->esp + 20u);
     c->esp += 28;
 
-    if (ppVB == 0 || g_mem == NULL) {
+    if (ppVB == 0 || !GUEST_MEM_READY) {
         c->eax = D3DERR_INVALIDCALL;
         return;
     }
@@ -729,7 +729,7 @@ void d3d9_dev_shim_CreateIndexBuffer(CPU *c) {
     uint32_t ppIB   = MR32(c->esp + 20u);
     c->esp += 28;
 
-    if (ppIB == 0 || g_mem == NULL) {
+    if (ppIB == 0 || !GUEST_MEM_READY) {
         c->eax = D3DERR_INVALIDCALL;
         return;
     }
@@ -799,7 +799,7 @@ void d3d9_dev_shim_SetTransform(CPU *c) {
     uint32_t pMat  = MR32(c->esp + 8u);
     c->esp += 12;
 
-    if (pMat != 0 && g_mem != NULL) {
+    if (pMat != 0 && GUEST_MEM_READY) {
         d3d9_cmd_set_transform_t cmd;
         cmd.state = state;
         memcpy(cmd.matrix, g_mem + pMat, 64);
@@ -815,7 +815,7 @@ void d3d9_dev_shim_SetViewport(CPU *c) {
     uint32_t pVP = MR32(c->esp + 4u);
     c->esp += 8;
 
-    if (pVP != 0 && g_mem != NULL) {
+    if (pVP != 0 && GUEST_MEM_READY) {
         memcpy(&s_viewport, g_mem + pVP, sizeof(s_viewport));
         emit_cmd(D3DCMD_SET_VIEWPORT, &s_viewport, sizeof(s_viewport));
     }
@@ -826,7 +826,7 @@ void d3d9_dev_shim_GetViewport(CPU *c) {
     uint32_t pVP = MR32(c->esp + 4u);
     c->esp += 8;
 
-    if (pVP != 0 && g_mem != NULL) {
+    if (pVP != 0 && GUEST_MEM_READY) {
         memcpy(g_mem + pVP, &s_viewport, sizeof(s_viewport));
     }
     c->eax = D3D_OK;
@@ -861,7 +861,7 @@ void d3d9_dev_shim_GetRenderState(CPU *c) {
     uint32_t pVal  = MR32(c->esp + 8u);
     c->esp += 12;
 
-    if (pVal != 0 && g_mem != NULL) {
+    if (pVal != 0 && GUEST_MEM_READY) {
         MR32(pVal) = (state < 256) ? s_render_states[state] : 0u;
     }
     c->eax = D3D_OK;
@@ -877,7 +877,7 @@ void d3d9_dev_shim_GetTexture(CPU *c) {
     uint32_t stage = MR32(c->esp + 4u);
     uint32_t ppTex = MR32(c->esp + 8u);
     c->esp += 12;
-    if (ppTex != 0 && g_mem != NULL) {
+    if (ppTex != 0 && GUEST_MEM_READY) {
         MR32(ppTex) = (stage < 16) ? s_textures[stage] : 0u;
     }
     c->eax = D3D_OK;
@@ -926,7 +926,7 @@ void d3d9_dev_shim_GetCurrentTexturePalette(CPU *c) { c->esp += 8; c->eax = D3D_
 void d3d9_dev_shim_SetScissorRect(CPU *c) {
     uint32_t pRect = MR32(c->esp + 4u);
     c->esp += 8;
-    if (pRect != 0 && g_mem != NULL) {
+    if (pRect != 0 && GUEST_MEM_READY) {
         emit_cmd(D3DCMD_SET_SCISSOR_RECT, g_mem + pRect, 16);
     }
     c->eax = D3D_OK;
@@ -993,7 +993,7 @@ void d3d9_dev_shim_ProcessVertices(CPU *c) { c->esp += 28; c->eax = D3D_OK; }
 void d3d9_dev_shim_CreateVertexDeclaration(CPU *c) {
     uint32_t ppDecl = MR32(c->esp + 8u);
     c->esp += 12;
-    if (ppDecl != 0 && g_mem != NULL) {
+    if (ppDecl != 0 && GUEST_MEM_READY) {
         MR32(ppDecl) = 0x02006000u + (s_next_resource_id++ * 16u);
     }
     c->eax = D3D_OK;
@@ -1007,7 +1007,7 @@ void d3d9_dev_shim_GetFVF(CPU *c) { c->esp += 8; c->eax = D3D_OK; }
 void d3d9_dev_shim_CreateVertexShader(CPU *c) {
     uint32_t ppShader = MR32(c->esp + 8u);
     c->esp += 12;
-    if (ppShader != 0 && g_mem != NULL) {
+    if (ppShader != 0 && GUEST_MEM_READY) {
         MR32(ppShader) = 0x02007000u + (s_next_resource_id++ * 16u);
     }
     c->eax = D3D_OK;
@@ -1028,7 +1028,7 @@ void d3d9_dev_shim_SetVertexShaderConstantF(CPU *c) {
     uint32_t count     = MR32(c->esp + 12u);
     c->esp += 16;
 
-    if (pData != 0 && count > 0 && g_mem != NULL) {
+    if (pData != 0 && count > 0 && GUEST_MEM_READY) {
         d3d9_cmd_set_constants_t cmd = { start_reg, count };
         emit_cmd(D3DCMD_SET_VS_CONSTANTS, &cmd, sizeof(cmd));
     }
@@ -1086,7 +1086,7 @@ void d3d9_dev_shim_GetIndices(CPU *c) { c->esp += 8; c->eax = D3D_OK; }
 void d3d9_dev_shim_CreatePixelShader(CPU *c) {
     uint32_t ppShader = MR32(c->esp + 8u);
     c->esp += 12;
-    if (ppShader != 0 && g_mem != NULL) {
+    if (ppShader != 0 && GUEST_MEM_READY) {
         MR32(ppShader) = 0x02008000u + (s_next_resource_id++ * 16u);
     }
     c->eax = D3D_OK;
@@ -1107,7 +1107,7 @@ void d3d9_dev_shim_SetPixelShaderConstantF(CPU *c) {
     uint32_t count     = MR32(c->esp + 12u);
     c->esp += 16;
 
-    if (pData != 0 && count > 0 && g_mem != NULL) {
+    if (pData != 0 && count > 0 && GUEST_MEM_READY) {
         d3d9_cmd_set_constants_t cmd = { start_reg, count };
         emit_cmd(D3DCMD_SET_PS_CONSTANTS, &cmd, sizeof(cmd));
     }
@@ -1272,7 +1272,7 @@ static const guest_fn_t s_device_method_handlers[D3D9_DEV_METHOD_TOTAL_COUNT] = 
  * -------------------------------------------------------------------------- */
 void d3d9_init_iat(void) {
     /* 1. Bind Direct3DCreate9 IAT slot at 0x009675bc in .rdata */
-    if (g_mem != NULL) {
+    if (GUEST_MEM_READY) {
         MR32(D3D9_DIRECT3DCREATE9_IAT_VA) = D3D9_DIRECT3DCREATE9_IAT_VA;
 
         /* 2. Setup IDirect3D9 COM Vtable at D3D9_VTABLE_VA (0x02001000 in heap) */

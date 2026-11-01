@@ -237,6 +237,7 @@ void win32_init_iat(void);
 size_t win32_get_import_count(void);
 const win32_import_entry_t *win32_get_import_table(void);
 void win32_post_key_event(uint32_t vk, bool down);
+bool win32_get_key_state(uint32_t vk);
 void win32_set_window_dims(uint32_t width, uint32_t height);
 
 #ifdef __cplusplus

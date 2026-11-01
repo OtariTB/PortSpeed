@@ -8,7 +8,8 @@
     "dev": "npm run wasm && vite --host 127.0.0.1",
     "build": "npm run wasm && tsc --noEmit && vite build",
     "test": "npm run wasm && tsx --test tests/core.test.ts",
-    "test:browser": "node tests/browser.mjs"
+    "test:browser": "node tests/browser.mjs",
+    "start": "python ../tools/serve.py --port 8080"
   },
   "devDependencies": {
     "assemblyscript": "0.28.20",

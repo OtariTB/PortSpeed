@@ -41,8 +41,11 @@ static uint32_t g_tls_bitmap = 0;
 static uint32_t g_wnd_proc = 0;
 static uint32_t g_win_width = 1280;
 static uint32_t g_win_height = 720;
-static uint32_t g_msg_queue[16][4]; /* (hwnd, msg, wParam, lParam) */
-static uint32_t g_msg_count = 0;
+#define WIN32_MSG_QUEUE_CAPACITY 64u
+static uint32_t g_msg_queue[WIN32_MSG_QUEUE_CAPACITY][4]; /* (hwnd, msg, wParam, lParam) */
+static uint32_t g_msg_head = 0;
+static uint32_t g_msg_tail = 0;
+static uint8_t  g_key_state[256];
 
 static uint32_t alloc_handle(uint32_t type, const char *name) {
     for (uint32_t i = 0x10; i < MAX_WIN32_HANDLES; ++i) {
@@ -632,15 +635,15 @@ void win32_shim_ShowCursor(CPU *c) {
 }
 void win32_shim_PeekMessageA(CPU *c) {
     uint32_t pMsg = MR32(c->esp);
-    if (g_msg_count > 0 && pMsg) {
-        g_msg_count--;
-        MR32(pMsg + 0)  = g_msg_queue[g_msg_count][0]; /* hwnd */
-        MR32(pMsg + 4)  = g_msg_queue[g_msg_count][1]; /* message */
-        MR32(pMsg + 8)  = g_msg_queue[g_msg_count][2]; /* wParam */
-        MR32(pMsg + 12) = g_msg_queue[g_msg_count][3]; /* lParam */
+    if (g_msg_head != g_msg_tail && pMsg) {
+        MR32(pMsg + 0)  = g_msg_queue[g_msg_tail][0]; /* hwnd */
+        MR32(pMsg + 4)  = g_msg_queue[g_msg_tail][1]; /* message */
+        MR32(pMsg + 8)  = g_msg_queue[g_msg_tail][2]; /* wParam */
+        MR32(pMsg + 12) = g_msg_queue[g_msg_tail][3]; /* lParam */
         MR32(pMsg + 16) = (uint32_t)time(NULL);        /* time */
         MR32(pMsg + 20) = 0;                           /* pt.x */
         MR32(pMsg + 24) = 0;                           /* pt.y */
+        g_msg_tail = (g_msg_tail + 1u) % WIN32_MSG_QUEUE_CAPACITY;
         c->eax = 1;
     } else {
         c->eax = 0;
@@ -726,7 +729,9 @@ void win32_shim_MapVirtualKeyExA(CPU *c) {
     c->esp += 12;
 }
 void win32_shim_GetKeyState(CPU *c) {
-    c->eax = 0;
+    uint32_t vk = MR32(c->esp);
+    int16_t state = (vk < 256u && (g_key_state[vk] & 0x80u)) ? (int16_t)0x8000 : 0;
+    c->eax = (uint32_t)(uint16_t)state;
     c->esp += 4;
 }
 void win32_shim_IsIconic(CPU *c) {
@@ -1319,13 +1324,21 @@ void win32_set_window_dims(uint32_t width, uint32_t height) {
 }
 
 void win32_post_key_event(uint32_t vk, bool down) {
-    if (g_msg_count < 16) {
-        g_msg_queue[g_msg_count][0] = 0x00010001u; /* hwnd */
-        g_msg_queue[g_msg_count][1] = down ? 0x0100u : 0x0101u; /* WM_KEYDOWN / UP */
-        g_msg_queue[g_msg_count][2] = vk; /* wParam */
-        g_msg_queue[g_msg_count][3] = 0;  /* lParam */
-        g_msg_count++;
+    if (vk < 256u) {
+        g_key_state[vk] = down ? 0x80u : 0x00u;
     }
+    uint32_t next_head = (g_msg_head + 1u) % WIN32_MSG_QUEUE_CAPACITY;
+    if (next_head != g_msg_tail) {
+        g_msg_queue[g_msg_head][0] = 0x00010001u; /* hwnd */
+        g_msg_queue[g_msg_head][1] = down ? 0x0100u : 0x0101u; /* WM_KEYDOWN / UP */
+        g_msg_queue[g_msg_head][2] = vk; /* wParam */
+        g_msg_queue[g_msg_head][3] = 0;  /* lParam */
+        g_msg_head = next_head;
+    }
+}
+
+bool win32_get_key_state(uint32_t vk) {
+    return (vk < 256u) ? ((g_key_state[vk] & 0x80u) != 0) : false;
 }
 
 void win32_init_iat(void) {

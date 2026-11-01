@@ -55,7 +55,12 @@ typedef enum {
     D3DCMD_SET_VS_CONSTANTS             = 22,
     D3DCMD_SET_PS_CONSTANTS             = 23,
     D3DCMD_SET_SCISSOR_RECT             = 24,
-    D3DCMD_COUNT                        = 25
+    D3DCMD_UPDATE_VERTEX_BUFFER         = 25,
+    D3DCMD_DESTROY_VERTEX_BUFFER        = 26,
+    D3DCMD_UPDATE_INDEX_BUFFER          = 27,
+    D3DCMD_DESTROY_INDEX_BUFFER         = 28,
+    D3DCMD_CREATE_VERTEX_DECLARATION    = 29,
+    D3DCMD_COUNT                        = 30
 } d3d9_cmd_type_t;
 
 /* --------------------------------------------------------------------------
@@ -179,6 +184,19 @@ typedef struct {
     uint32_t pool;
 } d3d9_cmd_create_vertex_buffer_t;
 
+/* D3DCMD_UPDATE_VERTEX_BUFFER (12 bytes header + payload) */
+typedef struct {
+    uint32_t buffer_id;
+    uint32_t offset;            /* Byte offset into the vertex buffer */
+    uint32_t size;              /* Byte length of vertex data following this header */
+    /* Followed immediately by size bytes of raw vertex data */
+} d3d9_cmd_update_vertex_buffer_t;
+
+/* D3DCMD_DESTROY_VERTEX_BUFFER (4 bytes) */
+typedef struct {
+    uint32_t buffer_id;
+} d3d9_cmd_destroy_vertex_buffer_t;
+
 /* D3DCMD_CREATE_INDEX_BUFFER (20 bytes) */
 typedef struct {
     uint32_t buffer_id;
@@ -187,6 +205,41 @@ typedef struct {
     uint32_t format;           /* D3DFMT_INDEX16=101, D3DFMT_INDEX32=102 */
     uint32_t pool;
 } d3d9_cmd_create_index_buffer_t;
+
+/* D3DCMD_UPDATE_INDEX_BUFFER (12 bytes header + payload) */
+typedef struct {
+    uint32_t buffer_id;
+    uint32_t offset;            /* Byte offset into the index buffer */
+    uint32_t size;              /* Byte length of index data following this header */
+    /* Followed immediately by size bytes of raw index data */
+} d3d9_cmd_update_index_buffer_t;
+
+/* D3DCMD_DESTROY_INDEX_BUFFER (4 bytes) */
+typedef struct {
+    uint32_t buffer_id;
+} d3d9_cmd_destroy_index_buffer_t;
+
+/* Direct3D 9 Vertex Element (D3DVERTEXELEMENT9, 8 bytes) */
+typedef struct {
+    uint16_t stream;            /* Stream index (0..15, or 0xFF for D3DDECL_END) */
+    uint16_t offset;            /* Byte offset in vertex stream */
+    uint8_t  type;              /* D3DDECLTYPE (FLOAT1=0..FLOAT4=3, D3DCOLOR=4, UBYTE4=5, etc.) */
+    uint8_t  method;            /* D3DDECLMETHOD (0 = DEFAULT) */
+    uint8_t  usage;             /* D3DDECLUSAGE (POSITION=0, NORMAL=3, TEXCOORD=5, COLOR=10, etc.) */
+    uint8_t  usage_index;       /* Semantic index (0..15) */
+} d3d9_vertex_element_t;
+
+/* D3DCMD_CREATE_VERTEX_DECLARATION (8 bytes header + element_count * 8 bytes) */
+typedef struct {
+    uint32_t decl_id;
+    uint32_t element_count;
+    /* Followed immediately by element_count * sizeof(d3d9_vertex_element_t) bytes */
+} d3d9_cmd_create_vertex_declaration_t;
+
+/* D3DCMD_SET_VERTEX_DECLARATION (4 bytes) */
+typedef struct {
+    uint32_t decl_id;           /* Vertex declaration ID (0 = unbind) */
+} d3d9_cmd_set_vertex_declaration_t;
 
 /* D3DCMD_CREATE_TEXTURE (28 bytes) */
 typedef struct {
@@ -212,7 +265,7 @@ typedef struct {
 
 /* D3DCMD_DESTROY_RESOURCE (8 bytes) */
 typedef struct {
-    uint32_t resource_type;     /* 1=VB, 2=IB, 3=Texture, 4=Shader */
+    uint32_t resource_type;     /* 1=VB, 2=IB, 3=Texture, 4=VertexDecl/Shader */
     uint32_t resource_id;
 } d3d9_cmd_destroy_resource_t;
 

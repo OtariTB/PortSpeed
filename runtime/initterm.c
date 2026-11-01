@@ -1,6 +1,7 @@
 /* Need for Speed ProStreet - Static C++ Initializer Chain & MSVC Hook Implementation.
  */
 #include "initterm.h"
+#include "boot.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -40,6 +41,7 @@ uint32_t initterm_run_cpp_constructors(CPU *c) {
         uint32_t fn_va = MR32(p);
         if (fn_va != 0) {
             uint32_t saved_esp = c->esp;
+            GUEST_PUSH32(c, GUEST_DUMMY_RETURN_VA);
             DISPATCH_CALL(c, fn_va);
             c->esp = saved_esp;
             count++;

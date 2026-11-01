@@ -36,8 +36,22 @@ class TestD3D9ConsumerIntegration(unittest.TestCase):
         bundle_file = WORKSPACE / "tools" / "d3d9_consumer.bundle.js"
         src_file = WORKSPACE / "web" / "src" / "d3d9_consumer.ts"
         if not bundle_file.exists() or (src_file.exists() and src_file.stat().st_mtime > bundle_file.stat().st_mtime):
+            esbuild_bin = WORKSPACE / "web" / "node_modules" / "tsx" / "node_modules" / ".bin" / ("esbuild.cmd" if os.name == "nt" else "esbuild")
+            cmd = (
+                [str(esbuild_bin), "web/src/d3d9_consumer.ts", "--bundle", "--format=iife", "--global-name=D3D9", "--outfile=tools/d3d9_consumer.bundle.js"]
+                if esbuild_bin.exists()
+                else [npx_cmd, "--prefix", "web", "esbuild", "web/src/d3d9_consumer.ts", "--format=iife", "--global-name=D3D9", "--outfile=tools/d3d9_consumer.bundle.js"]
+            )
             res_esbuild = subprocess.run(
-                [npx_cmd, "--prefix", "web", "esbuild", "web/src/d3d9_consumer.ts", "--format=iife", "--global-name=D3D9", "--outfile=tools/d3d9_consumer.bundle.js"],
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=str(WORKSPACE),
+                check=False,
+            )
+            assert res_esbuild.returncode == 0, f"esbuild bundling failed:\n{res_esbuild.stderr}"
+            res_esbuild = subprocess.run(
+                cmd,
                 capture_output=True,
                 text=True,
                 cwd=str(WORKSPACE),
@@ -110,7 +124,7 @@ window.addEventListener('DOMContentLoaded', () => {{
             0,
             f"web/tests/d3d9_consumer.test.ts failed ({res.returncode}):\n{res.stdout}\n{res.stderr}",
         )
-        self.assertIn("pass 11", res.stdout)
+        self.assertIn("pass 19", res.stdout)
         self.assertIn("fail 0", res.stdout)
 
     def test_webgl2_genuine_prostreet_command_stream(self):
@@ -900,6 +914,347 @@ window.addEventListener('DOMContentLoaded', () => {{
 
         # Disable blend
         self.assertFalse(result["blendOff"])
+
+    def test_webgl2_vertex_buffer_lifecycle_and_gpu_readback(self):
+        """Verifies WebGLBuffer allocation, bufferSubData upload, GPU getBufferSubData readback, and deletion."""
+        script = """
+        const cap = 4096;
+        const ringBuf = new ArrayBuffer(64 + cap);
+        const producer = D3D9.D3D9CommandProducer.initRing(ringBuf, 0, cap);
+        const consumer = new D3D9.D3D9CommandConsumer(ringBuf, 0, { gl });
+
+        // 1. Create static VB (id=1, 64 bytes) and dynamic VB (id=2, 128 bytes, D3DUSAGE_DYNAMIC=0x200)
+        producer.emitCreateVertexBuffer(1, 64, 0x08, 0x142, 1);
+        producer.emitCreateVertexBuffer(2, 128, 0x208, 0, 0);
+        consumer.processCommands();
+
+        const vb1 = consumer.getVertexBuffer(1);
+        const vb2 = consumer.getVertexBuffer(2);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, vb1.glBuffer);
+        const vb1Size = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+        const vb1Usage = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_USAGE);
+        const vb1ValidBefore = gl.isBuffer(vb1.glBuffer);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, vb2.glBuffer);
+        const vb2Size = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+        const vb2Usage = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_USAGE);
+
+        // 2. Upload initial 8 floats (32 bytes) to vb1 at offset 0
+        const initialFloats = new Float32Array([1.5, -2.5, 3.25, 4.0, 10.0, 20.0, 30.0, 40.0]);
+        producer.emitUpdateVertexBuffer(1, 0, initialFloats);
+
+        // 3. Partial sub-data update: overwrite floats[4..7] at byte offset 16 and append floats[8..11] at byte offset 32
+        const patchFloats = new Float32Array([55.0, 66.0, 77.0, 88.0, 100.5, 200.5, 300.5, 400.5]);
+        producer.emitUpdateVertexBuffer(1, 16, patchFloats);
+        consumer.processCommands();
+
+        // 4. Read back directly from GPU VRAM via WebGL2 gl.getBufferSubData
+        gl.bindBuffer(gl.ARRAY_BUFFER, vb1.glBuffer);
+        const gpuReadback = new Float32Array(12);
+        gl.getBufferSubData(gl.ARRAY_BUFFER, 0, gpuReadback);
+
+        // 5. Bind stream 0 to vb1 (offset=16, stride=16), then destroy vb1
+        producer.emitSetStreamSource(0, 1, 16, 16);
+        consumer.processCommands();
+        const streamBeforeDestroy = { ...consumer.getStreamSource(0) };
+
+        const rawGlBuf1 = vb1.glBuffer;
+        producer.emitDestroyVertexBuffer(1);
+        consumer.processCommands();
+
+        const vb1ValidAfter = gl.isBuffer(rawGlBuf1);
+        const streamAfterDestroy = { ...consumer.getStreamSource(0) };
+
+        document.getElementById('result').innerText = JSON.stringify({
+            success: true,
+            vb1Size,
+            vb1Usage,
+            vb1ValidBefore,
+            vb1ValidAfter,
+            vb2Size,
+            vb2Usage,
+            gpuReadback: Array.from(gpuReadback),
+            streamBeforeDestroy,
+            streamAfterDestroy
+        });
+        """
+
+        result = self.run_chrome_webgl2(script)
+        self.assertTrue(result.get("success"), f"WebGL2 VB lifecycle failed: {result.get('error')}")
+
+        self.assertEqual(result["vb1Size"], 64)
+        self.assertEqual(result["vb1Usage"], 0x88E4)  # gl.STATIC_DRAW
+        self.assertTrue(result["vb1ValidBefore"])
+        self.assertFalse(result["vb1ValidAfter"])
+
+        self.assertEqual(result["vb2Size"], 128)
+        self.assertEqual(result["vb2Usage"], 0x88E8)  # gl.DYNAMIC_DRAW
+
+        expected_floats = [
+            1.5, -2.5, 3.25, 4.0,
+            55.0, 66.0, 77.0, 88.0,
+            100.5, 200.5, 300.5, 400.5,
+        ]
+        self.assertEqual(result["gpuReadback"], expected_floats)
+
+        self.assertEqual(result["streamBeforeDestroy"]["bufferId"], 1)
+        self.assertEqual(result["streamBeforeDestroy"]["offset"], 16)
+        self.assertEqual(result["streamBeforeDestroy"]["stride"], 16)
+
+        self.assertEqual(result["streamAfterDestroy"]["bufferId"], 0)
+        self.assertEqual(result["streamAfterDestroy"]["offset"], 0)
+        self.assertEqual(result["streamAfterDestroy"]["stride"], 0)
+
+    def test_webgl2_vertex_buffer_stream_binding_diagnostic_draw(self):
+        """Verifies rendering geometry from a D3D9 vertex buffer bound via SET_STREAM_SOURCE with non-zero offset and stride."""
+        script = """
+        const cap = 4096;
+        const ringBuf = new ArrayBuffer(64 + cap);
+        const producer = D3D9.D3D9CommandProducer.initRing(ringBuf, 0, cap);
+        const consumer = new D3D9.D3D9CommandConsumer(ringBuf, 0, { gl });
+
+        // Allocate a 256-byte dynamic vertex buffer (bufferId = 3)
+        producer.emitCreateVertexBuffer(3, 256, 0x200, 0, 0);
+
+        // Interleaved vertex format: [x, y, r, g, b, a] = 6 floats = 24 bytes stride.
+        // Upload 3 vertices (fullscreen triangle colored pure ProStreet Green: 0.0, 1.0, 0.25, 1.0)
+        // at a non-zero byte offset of 48 bytes inside vertex buffer 3.
+        const triVerts = new Float32Array([
+            -1.0, -1.0,   0.0, 1.0, 0.0, 1.0,
+             3.0, -1.0,   0.0, 1.0, 0.0, 1.0,
+            -1.0,  3.0,   0.0, 1.0, 0.0, 1.0,
+        ]);
+        producer.emitUpdateVertexBuffer(3, 48, triVerts);
+
+        // Bind vertex buffer 3 to stream 0 with byte offset = 48, stride = 24
+        producer.emitSetStreamSource(0, 3, 48, 24);
+        consumer.processCommands();
+
+        // Clear screen to black
+        producer.emitBeginScene();
+        producer.emitClear(1, 0xFF000000, 1.0, 0);
+        producer.emitEndScene();
+        consumer.processCommands();
+
+        // Execute diagnostic draw using the bound stream 0 state from consumer
+        const stream0 = consumer.getStreamSource(0);
+        const vbEntry = consumer.getVertexBuffer(stream0.bufferId);
+
+        const vs = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vs, `#version 300 es
+            layout(location = 0) in vec2 aPos;
+            layout(location = 1) in vec4 aColor;
+            out vec4 vColor;
+            void main() {
+                vColor = aColor;
+                gl_Position = vec4(aPos, 0.0, 1.0);
+            }`);
+        gl.compileShader(vs);
+
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fs, `#version 300 es
+            precision mediump float;
+            in vec4 vColor;
+            out vec4 fragColor;
+            void main() { fragColor = vColor; }`);
+        gl.compileShader(fs);
+
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        gl.useProgram(prog);
+
+        const vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbEntry.glBuffer);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, stream0.stride, stream0.offset + 0);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 4, gl.FLOAT, false, stream0.stride, stream0.offset + 8);
+
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        const centerPixel = new Uint8Array(4);
+        gl.readPixels(320, 240, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, centerPixel);
+
+        document.getElementById('result').innerText = JSON.stringify({
+            success: true,
+            centerPixel: Array.from(centerPixel),
+            stream0: stream0
+        });
+        """
+
+        result = self.run_chrome_webgl2(script)
+        self.assertTrue(result.get("success"), f"Diagnostic VB draw failed: {result.get('error')}")
+        self.assertEqual(result["stream0"]["bufferId"], 3)
+        self.assertEqual(result["stream0"]["offset"], 48)
+        self.assertEqual(result["stream0"]["stride"], 24)
+        self.assertEqual(result["centerPixel"], [0, 255, 0, 255])
+
+    def test_webgl2_index_buffer_lifecycle_and_gpu_readback(self):
+        """Verifies 16-bit and 32-bit IndexBuffer allocation, bufferSubData upload, ELEMENT_ARRAY_BUFFER readback, and deletion."""
+        script = """
+        const cap = 4096;
+        const ringBuf = new ArrayBuffer(64 + cap);
+        const producer = D3D9.D3D9CommandProducer.initRing(ringBuf, 0, cap);
+        const consumer = new D3D9.D3D9CommandConsumer(ringBuf, 0, { gl });
+
+        // Create 16-bit IB (id=1, 32 bytes, D3DFMT_INDEX16=101) and 32-bit IB (id=2, 64 bytes, D3DFMT_INDEX32=102)
+        producer.emitCreateIndexBuffer(1, 32, 0x08, 101, 1);
+        producer.emitCreateIndexBuffer(2, 64, 0x208, 102, 0);
+
+        // Upload 6 uint16 indices into IB 1 and 3 uint32 indices into IB 2
+        producer.emitUpdateIndexBuffer(1, 0, new Uint16Array([0, 1, 2, 2, 3, 0]));
+        producer.emitUpdateIndexBuffer(2, 8, new Uint32Array([1000, 2000, 3000]));
+        producer.emitSetIndices(1);
+        consumer.processCommands();
+
+        const ib1 = consumer.getIndexBuffer(1);
+        const ib2 = consumer.getIndexBuffer(2);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib1.glBuffer);
+        const read16 = new Uint16Array(6);
+        gl.getBufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, read16);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib2.glBuffer);
+        const read32 = new Uint32Array(3);
+        gl.getBufferSubData(gl.ELEMENT_ARRAY_BUFFER, 8, read32);
+
+        const rawGlIb1 = ib1.glBuffer;
+        const validBefore = gl.isBuffer(rawGlIb1);
+        producer.emitDestroyIndexBuffer(1);
+        consumer.processCommands();
+        const validAfter = gl.isBuffer(rawGlIb1);
+
+        document.getElementById('result').innerText = JSON.stringify({
+            success: true,
+            read16: Array.from(read16),
+            read32: Array.from(read32),
+            validBefore,
+            validAfter,
+            boundAfterDestroy: consumer.boundIndexBufferId
+        });
+        """
+
+        result = self.run_chrome_webgl2(script)
+        self.assertTrue(result.get("success"), f"WebGL2 IB lifecycle failed: {result.get('error')}")
+        self.assertEqual(result["read16"], [0, 1, 2, 2, 3, 0])
+        self.assertEqual(result["read32"], [1000, 2000, 3000])
+        self.assertTrue(result["validBefore"])
+        self.assertFalse(result["validAfter"])
+        self.assertEqual(result["boundAfterDestroy"], 0)
+
+    def test_webgl2_end_to_end_textured_indexed_draw_pipeline(self):
+        """Verifies full Phase 4.3 pipeline: VertexDecl + VB + IB + Texture + Sampler + DrawIndexedPrimitive in WebGL2."""
+        script = """
+        const cap = 8192;
+        const ringBuf = new ArrayBuffer(64 + cap);
+        const producer = D3D9.D3D9CommandProducer.initRing(ringBuf, 0, cap);
+        const consumer = new D3D9.D3D9CommandConsumer(ringBuf, 0, { gl });
+
+        // Bind a shader program that samples texture stage 0 and multiplies by vertex color
+        const vs = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vs, `#version 300 es
+            layout(location = 0) in vec2 aPos;
+            layout(location = 1) in vec2 aUV;
+            out vec2 vUV;
+            void main() {
+                vUV = aUV;
+                gl_Position = vec4(aPos, 0.0, 1.0);
+            }`);
+        gl.compileShader(vs);
+
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fs, `#version 300 es
+            precision mediump float;
+            in vec2 vUV;
+            uniform sampler2D uTex0;
+            out vec4 fragColor;
+            void main() {
+                fragColor = texture(uTex0, vUV);
+            }`);
+        gl.compileShader(fs);
+
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        gl.useProgram(prog);
+        gl.uniform1i(gl.getUniformLocation(prog, 'uTex0'), 0);
+
+        const vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+
+        // 1. Create and bind Vertex Declaration:
+        // attr 0: FLOAT2 (type=1) at offset 0 (POSITION)
+        // attr 1: FLOAT2 (type=1) at offset 8 (TEXCOORD0)
+        producer.emitCreateVertexDeclaration(1, [
+            { stream: 0, offset: 0, type: 1, method: 0, usage: 0, usageIndex: 0 },
+            { stream: 0, offset: 8, type: 1, method: 0, usage: 5, usageIndex: 0 },
+        ]);
+        producer.emitSetVertexDeclaration(1);
+
+        // 2. Create and populate Vertex Buffer (4 vertices * 16 bytes = 64 bytes)
+        producer.emitCreateVertexBuffer(1, 64, 0x08, 0, 1);
+        const quadVerts = new Float32Array([
+            -1.0, -1.0,  0.5, 0.5,
+             1.0, -1.0,  0.5, 0.5,
+             1.0,  1.0,  0.5, 0.5,
+            -1.0,  1.0,  0.5, 0.5,
+        ]);
+        producer.emitUpdateVertexBuffer(1, 0, quadVerts);
+        producer.emitSetStreamSource(0, 1, 0, 16);
+
+        // 3. Create and populate Index Buffer (6 uint16 indices = 2 triangles)
+        producer.emitCreateIndexBuffer(1, 12, 0x08, 101, 1);
+        producer.emitUpdateIndexBuffer(1, 0, new Uint16Array([0, 1, 2, 0, 2, 3]));
+        producer.emitSetIndices(1);
+
+        // 4. Create and populate 2x2 A8R8G8B8 texture filled with ProStreet Gold (R=240, G=180, B=20, A=255)
+        // In D3DFMT_A8R8G8B8 little-endian memory order: [B=20, G=180, R=240, A=255]
+        producer.emitCreateTexture(1, 2, 2, 1, 0, 21, 1);
+        const texBytes = new Uint8Array([
+            20, 180, 240, 255,   20, 180, 240, 255,
+            20, 180, 240, 255,   20, 180, 240, 255,
+        ]);
+        producer.emitUpdateTexture(1, 0, 8, 2, 2, texBytes);
+        producer.emitSetSamplerState(0, 1, 3); // ADDRESSU = CLAMP
+        producer.emitSetSamplerState(0, 2, 3); // ADDRESSV = CLAMP
+        producer.emitSetSamplerState(0, 5, 1); // MAGFILTER = POINT
+        producer.emitSetSamplerState(0, 6, 1); // MINFILTER = POINT
+        producer.emitSetTexture(0, 1);
+
+        // 5. Disable culling and depth test, clear to black, and issue DRAW_INDEXED_PRIMITIVE via command stream
+        producer.emitSetRenderState(22, 1); // CULLMODE = NONE
+        producer.emitSetRenderState(7, 0);  // ZENABLE = FALSE
+        producer.emitBeginScene();
+        producer.emitClear(1, 0xFF000000, 1.0, 0);
+        producer.emitDrawIndexedPrimitive(4, 0, 0, 4, 0, 2); // D3DPT_TRIANGLELIST = 4, 2 tris
+        producer.emitEndScene();
+        producer.emitPresent(0, 0, 640, 480);
+
+        consumer.processCommands();
+
+        const centerPixel = new Uint8Array(4);
+        gl.readPixels(320, 240, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, centerPixel);
+
+        document.getElementById('result').innerText = JSON.stringify({
+            success: true,
+            drawCallsExecuted: consumer.drawCallsExecuted,
+            presentedFrames: consumer.presentedFrames,
+            centerPixel: Array.from(centerPixel)
+        });
+        """
+
+        result = self.run_chrome_webgl2(script)
+        self.assertTrue(result.get("success"), f"End-to-end textured indexed draw failed: {result.get('error')}")
+        self.assertEqual(result["drawCallsExecuted"], 1)
+        self.assertEqual(result["presentedFrames"], 1)
+        self.assertEqual(result["centerPixel"], [240, 180, 20, 255])
 
 
 if __name__ == "__main__":

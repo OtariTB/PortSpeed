@@ -2,10 +2,10 @@
   "schema": "nfsu-shards-manifest-v1",
   "total_functions": 31995,
   "num_shards": 32,
-  "total_c_size_bytes": 128779028,
+  "total_c_size_bytes": 132270455,
   "fntab_h": "fntab.h",
   "fntab_c": "fntab.c",
-  "generated_utc": "2026-10-31T10:30:17.763939+00:00",
+  "generated_utc": "2026-11-01T11:21:21.848484+00:00",
   "shards": [
     {
       "index": 0,
@@ -13,7 +13,7 @@
       "function_count": 999,
       "min_address": "0x00401000",
       "max_address": "0x00430ca0",
-      "file_size_bytes": 3577705
+      "file_size_bytes": 3688970
     },
     {
       "index": 1,
@@ -21,7 +21,7 @@
       "function_count": 1000,
       "min_address": "0x00430cb0",
       "max_address": "0x00469190",
-      "file_size_bytes": 2882095
+      "file_size_bytes": 2954495
     },
     {
       "index": 2,
@@ -29,7 +29,7 @@
       "function_count": 1000,
       "min_address": "0x00469270",
       "max_address": "0x004a22e0",
-      "file_size_bytes": 3991262
+      "file_size_bytes": 4107382
     },
     {
       "index": 3,
@@ -37,7 +37,7 @@
       "function_count": 1000,
       "min_address": "0x004a23f0",
       "max_address": "0x004e4e55",
-      "file_size_bytes": 2656765
+      "file_size_bytes": 2748304
     },
     {
       "index": 4,
@@ -45,7 +45,7 @@
       "function_count": 1000,
       "min_address": "0x004e4e70",
       "max_address": "0x0051f2c0",
-      "file_size_bytes": 3154444
+      "file_size_bytes": 3265841
     },
     {
       "index": 5,
@@ -53,7 +53,7 @@
       "function_count": 1000,
       "min_address": "0x0051f370",
       "max_address": "0x00540b20",
-      "file_size_bytes": 1935278
+      "file_size_bytes": 2027620
     },
     {
       "index": 6,
@@ -61,7 +61,7 @@
       "function_count": 999,
       "min_address": "0x00540b80",
       "max_address": "0x0058a4c0",
-      "file_size_bytes": 4422385
+      "file_size_bytes": 4612530
     },
     {
       "index": 7,
@@ -69,7 +69,7 @@
       "function_count": 1000,
       "min_address": "0x0058a600",
       "max_address": "0x005a6e50",
-      "file_size_bytes": 1840518
+      "file_size_bytes": 1926816
     },
     {
       "index": 8,
@@ -77,7 +77,7 @@
       "function_count": 1000,
       "min_address": "0x005a6e90",
       "max_address": "0x005d5a20",
-      "file_size_bytes": 2736430
+      "file_size_bytes": 2885946
     },
     {
       "index": 9,
@@ -85,7 +85,7 @@
       "function_count": 1000,
       "min_address": "0x005d5b2e",
       "max_address": "0x00620840",
-      "file_size_bytes": 4775822
+      "file_size_bytes": 5063693
     },
     {
       "index": 10,
@@ -93,7 +93,7 @@
       "function_count": 1000,
       "min_address": "0x00620850",
       "max_address": "0x006494b6",
-      "file_size_bytes": 4058295
+      "file_size_bytes": 4173165
     },
     {
       "index": 11,
@@ -101,7 +101,7 @@
       "function_count": 1000,
       "min_address": "0x006494c4",
       "max_address": "0x006733e0",
-      "file_size_bytes": 2492532
+      "file_size_bytes": 2604874
     },
     {
       "index": 12,
@@ -109,7 +109,7 @@
       "function_count": 999,
       "min_address": "0x00673a90",
       "max_address": "0x006a6ba0",
-      "file_size_bytes": 2413299
+      "file_size_bytes": 2557431
     },
     {
       "index": 13,
@@ -117,7 +117,7 @@
       "function_count": 1000,
       "min_address": "0x006a6c70",
       "max_address": "0x006dfd30",
-      "file_size_bytes": 2383636
+      "file_size_bytes": 2492961
     },
     {
       "index": 14,
@@ -125,7 +125,7 @@
       "function_count": 1000,
       "min_address": "0x006dfd80",
       "max_address": "0x00723a80",
-      "file_size_bytes": 5215332
+      "file_size_bytes": 5393254
     },
     {
       "index": 15,
@@ -133,7 +133,7 @@
       "function_count": 1000,
       "min_address": "0x00723d20",
       "max_address": "0x0075bf00",
-      "file_size_bytes": 3042623
+      "file_size_bytes": 3160246
     },
     {
       "index": 16,
@@ -141,7 +141,7 @@
       "function_count": 1000,
       "min_address": "0x0075bf50",
       "max_address": "0x007b2b90",
-      "file_size_bytes": 5232307
+      "file_size_bytes": 5401002
     },
     {
       "index": 17,
@@ -149,7 +149,7 @@
       "function_count": 1000,
       "min_address": "0x007b2ba0",
       "max_address": "0x007d8220",
-      "file_size_bytes": 2017937
+      "file_size_bytes": 2157546
     },
     {
       "index": 18,
@@ -157,7 +157,7 @@
       "function_count": 1000,
       "min_address": "0x007d8440",
       "max_address": "0x0080fe4c",
-      "file_size_bytes": 3539503
+      "file_size_bytes": 3756506
     },
     {
       "index": 19,
@@ -165,7 +165,7 @@
       "function_count": 999,
       "min_address": "0x0080fed2",
       "max_address": "0x0082fed0",
-      "file_size_bytes": 2228655
+      "file_size_bytes": 2347359
     },
     {
       "index": 20,
@@ -173,7 +173,7 @@
       "function_count": 1000,
       "min_address": "0x0082fee0",
       "max_address": "0x00855aa0",
-      "file_size_bytes": 2264256
+      "file_size_bytes": 2392261
     },
     {
       "index": 21,
@@ -181,7 +181,7 @@
       "function_count": 1000,
       "min_address": "0x00855b20",
       "max_address": "0x0087fed0",
-      "file_size_bytes": 2813219
+      "file_size_bytes": 2955419
     },
     {
       "index": 22,
@@ -189,7 +189,7 @@
       "function_count": 1000,
       "min_address": "0x0087ffff",
       "max_address": "0x008affff",
-      "file_size_bytes": 3036132
+      "file_size_bytes": 3159796
     },
     {
       "index": 23,
@@ -197,7 +197,7 @@
       "function_count": 1000,
       "min_address": "0x008b004d",
       "max_address": "0x00905c30",
-      "file_size_bytes": 5812376
+      "file_size_bytes": 5930723
     },
     {
       "index": 24,
@@ -205,7 +205,7 @@
       "function_count": 1000,
       "min_address": "0x00905c70",
       "max_address": "0x009339d0",
-      "file_size_bytes": 3175929
+      "file_size_bytes": 3271431
     },
     {
       "index": 25,
@@ -213,7 +213,7 @@
       "function_count": 999,
       "min_address": "0x00933a00",
       "max_address": "0x0093b710",
-      "file_size_bytes": 269241
+      "file_size_bytes": 286793
     },
     {
       "index": 26,
@@ -221,7 +221,7 @@
       "function_count": 1000,
       "min_address": "0x0093b724",
       "max_address": "0x00942ea0",
-      "file_size_bytes": 281374
+      "file_size_bytes": 299054
     },
     {
       "index": 27,
@@ -229,7 +229,7 @@
       "function_count": 1000,
       "min_address": "0x00942ed0",
       "max_address": "0x0094a3d0",
-      "file_size_bytes": 247952
+      "file_size_bytes": 258302
     },
     {
       "index": 28,
@@ -237,7 +237,7 @@
       "function_count": 1000,
       "min_address": "0x0094a3db",
       "max_address": "0x0095192c",
-      "file_size_bytes": 261168
+      "file_size_bytes": 275843
     },
     {
       "index": 29,
@@ -245,7 +245,7 @@
       "function_count": 1000,
       "min_address": "0x00951960",
       "max_address": "0x00958f40",
-      "file_size_bytes": 293810
+      "file_size_bytes": 310004
     },
     {
       "index": 30,
@@ -253,7 +253,7 @@
       "function_count": 1000,
       "min_address": "0x00958f70",
       "max_address": "0x01a038a0",
-      "file_size_bytes": 969656
+      "file_size_bytes": 1028960
     },
     {
       "index": 31,
@@ -261,7 +261,7 @@
       "function_count": 1000,
       "min_address": "0x01a039f0",
       "max_address": "0x01f4fa9d",
-      "file_size_bytes": 42538624
+      "file_size_bytes": 42557460
     }
   ]
 }

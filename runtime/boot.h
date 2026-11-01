@@ -14,6 +14,8 @@
 #include "crt.h"
 #include "win32.h"
 #include "d3d9.h"
+#include "dinput.h"
+#include "dsound.h"
 #include "initterm.h"
 
 #ifdef __cplusplus
@@ -70,6 +72,22 @@ int boot_invoke_main(CPU *c, bool dry_run);
 
 /* Complete end-to-end boot chain */
 int boot_engine(const uint8_t *pe_bytes, size_t pe_size, int argc, const char **argv, bool dry_run);
+
+/* WebAssembly runtime entry points */
+#if defined(__wasm__) || defined(__EMSCRIPTEN__)
+#ifndef PROSTREET_WASM_EXPORT
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#define PROSTREET_WASM_EXPORT EMSCRIPTEN_KEEPALIVE
+#else
+#define PROSTREET_WASM_EXPORT __attribute__((visibility("default")))
+#endif
+#endif
+
+PROSTREET_WASM_EXPORT int prostreet_main(int argc, const char **argv);
+PROSTREET_WASM_EXPORT uint8_t *prostreet_get_guest_memory(void);
+PROSTREET_WASM_EXPORT int prostreet_tick(void);
+#endif
 
 #ifdef __cplusplus
 }

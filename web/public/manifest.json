@@ -1,0 +1,20 @@
+{
+  "name": "Need for Speed: ProStreet Web",
+  "short_name": "ProStreet",
+  "description": "Need for Speed: ProStreet (2007) WebAssembly static recompilation port for modern browsers with WebGL2/WebGPU graphics, Web Audio, and touch controls.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "theme_color": "#0d0d0d",
+  "background_color": "#000000",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
