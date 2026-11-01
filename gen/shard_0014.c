@@ -79347,6 +79347,7 @@ L_006f8d60:
     MR32(RG_(eax)+0x40u) = (RG_(ecx));
     MR32(RG_(eax)+0x44u) = (RG_(ecx));
     MR32(RG_(eax)+0x48u) = (RG_(ecx));
+    RG_(esp) += 4u;
     LR_STORE;
     return;
 }

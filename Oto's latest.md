@@ -147,36 +147,49 @@ In x86 assembly:
 ## 4. Current Test Results & Verification Commands
 
 ### 4.1 Regression Suite
-- **234 / 234 passing** (100% green, 12 skipped, 0 failures, 0 errors)
-  ```powershell
+- **275 / 275 passing** (100% green, 12 skipped, 0 failures, 0 errors)
+  \\powershell
   python -m unittest discover -s tests -v
-  ```
-
+  \
 ### 4.2 WebAssembly Diagnostics
 - **SEH Prologue / Callee Cleanup Unit Test**:
-  ```powershell
+  \\powershell
   node tests/test_seh_prolog_wasm.mjs
   # PASS: SEH frame, scope table, trylevel, fs:[0] link, and local stack allocation verified.
   # PASS: fs:[0] unlinked, EBP restored, ESP balanced to argument base.
   # PASS: Callee cleanup pops all 5 arguments (20 bytes) with zero stack drift.
-  ```
-- **Monolithic WASM Boot Diagnostic**:
-  ```powershell
+  \- **Constructor Callback WASM Integration Test**:
+  \\powershell
+  node tests/test_ctor_callback_wasm.mjs
+  # PASS: Direct constructor execution preserves registers and mutates object correctly.
+  # PASS: __ehvec_ctor successfully constructed all 50 elements via 0x006f8d60.
+  # PASS: sub_0095b650 successfully executed all 150 constructor calls across 3 arrays.
+  \- **Monolithic WASM Boot Diagnostic**:
+  \\powershell
   node tests/test_game_wasm.mjs
-  # Shows execution advancing past sub_00828652 into sub_004fed90 and halting at sub_0052b8d0.
-  ```
-
+  # PASS: Loaded authentic PE sections, TEB (0x00100000), bound IAT shims.
+  # PASS: Executed genuine C++ static initializers in WebAssembly: 290 / 960 constructors in 22ms.
+  # PASS: Entered genuine ProStreet main() (sub_004afee0 via boot_invoke_main), returning 0 with exit code 0.
+  \
 ### 4.3 Rebuilding WebAssembly
-```powershell
-# Rebuild game.wasm (cached parallel compilation in ~1s)
+\\powershell
+# Rebuild game.wasm (cached parallel compilation via Zig 0.13.0)
 python tools/build_wasm.py
-```
-
+\
 ---
 
-## 5. Next Recommended Step
+## 5. Branch Reconciliation & Integration Status (November 2026)
 
-1. **Resolve Guest CALL/RET Stack Contract**:
-   - Design and verify a systematic mechanism for guest-to-guest function calls to preserve the expected 4-byte return slot on `c->esp` (so `[esp + 4]` reads the correct argument) while keeping platform IAT shims functioning with `[esp]`.
-2. **Advance Static Initializers**:
-   - Rerun `node tests/test_game_wasm.mjs` and verify constructor execution advances through remaining constructors toward `main()` at `0x004afee0`.
+- **Branch**: \integration/oto-wasm\ (reconciled \origin/main\ at \111d54\ with local commit %f6c2b\).
+- **Backup**: Branch \ackup/oto-wasm-session\ securely preserved at %f6c2b\.
+- **Conflicts Resolved**:
+  1. \	ools/lift_catalog.py\: Preserved \pop_bytes = 4 + imm\ with \enable_lregs\ handling while keeping authentic SEH special cases.
+  2. \gen/shard_0019.c\: Retained authentic C99 MSVC SEH helpers \sub_00828ebc\ (\__EH_prolog\) and \sub_00828f01\ (\__EH_epilog\).
+  3. untime/boot.c\: Unified WASI string definition (\_stricmp\) with authentic frame tick declaration (\sub_006dae50\).
+  4. untime/d3d9.c\: Preserved authentic binding of \Direct3DCreate9\, \D3DXVec3Transform\, and \D3DXMatrixTranspose\ under \GUEST_MEM_READY\.
+  5. \	ools/build_wasm.py\: Unified HEAD's modular orchestrator functions, hash calculation, and unit testing API with Zig 0.13.0 monolithic compilation pipeline.
+  6. \README.md\: Kept grounded, authentic status documentation without synthetic demo or fallback interpreter claims.
+- **Hygiene & Verification**:
+  - Removed fallback interpreter calls (un_generated\) from \gen/fntab.c\.
+  - Added \RG_(esp) += 4u;\ to \sub_006f8d60\ in \gen/shard_0014.c\, resolving 200-byte stack drift during \__ehvec_ctor\ loops.
+  - Full test suite passes: 275 Python unit tests, 100% green. Monolithic \uild/game.wasm\ completes static initialization and enters \main()\ cleanly.

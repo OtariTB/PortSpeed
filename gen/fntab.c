@@ -30855,7 +30855,6 @@ void fntab_init(void) {
     fntab_init_chunk_12();
 }
 
-int run_generated(struct CPU *c, uint32_t entry);
 
 void dispatch_indirect(struct CPU *c, uint32_t addr) {
     uint32_t off = addr - DISPATCH_TEXT_BASE;
@@ -32071,9 +32070,6 @@ void dispatch_indirect(struct CPU *c, uint32_t addr) {
     case 0x01f454e8u: sub_01f454e8(c); return;
     case 0x01f4fa9du: sub_01f4fa9d(c); return;
     default:
-        if (run_generated(c, addr)) {
-            return;
-        }
         c->eip = addr;
 #ifndef __wasm__
         fprintf(stderr, "[DISPATCH] Unresolved indirect target: 0x%08x\n", addr);

@@ -424,6 +424,8 @@ def build_game_wasm(jobs: int = 4) -> int:
         ROOT_DIR / "runtime" / "crt.c",
         ROOT_DIR / "runtime" / "win32.c",
         ROOT_DIR / "runtime" / "d3d9.c",
+        ROOT_DIR / "runtime" / "dinput.c",
+        ROOT_DIR / "runtime" / "dsound.c",
         ROOT_DIR / "runtime" / "initterm.c",
         ROOT_DIR / "runtime" / "boot.c",
         ROOT_DIR / "gen" / "fntab.c",
