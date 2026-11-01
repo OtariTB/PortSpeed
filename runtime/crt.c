@@ -16,6 +16,11 @@
 #include <time.h>
 #include "crt.h"
 #include "memory.h"
+#if defined(__wasm__)
+clock_t clock(void) {
+    return (clock_t)0;
+}
+#endif
 
 /* --------------------------------------------------------------------------
  * Exit Callback Table

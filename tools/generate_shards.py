@@ -254,11 +254,124 @@ def generate_shards(
     return manifest
 
 
+def lift_single_function(
+    func_va: int,
+    raw_exe: bytes,
+    out_dir: Path,
+    trampoline_data: dict[str, Any] | None = None,
+) -> Path:
+    """Lifts a single function from raw_exe and inserts/updates it in the appropriate shard."""
+    import re
+    from tools.build_catalog import CatalogBuilder
+    from tools.lift_catalog import FunctionLifter
+
+    builder = CatalogBuilder(raw_exe, trampoline_data or {"trampolines": []})
+    fn_dict, calls = builder.disassemble_function(func_va, set())
+    if not fn_dict:
+        raise ValueError(f"Failed to disassemble function at 0x{func_va:08x}")
+
+    cat = {
+        "image_base": 0x400000,
+        "code_start": 0x401000,
+        "code_end": 0x967000,
+        "functions": [fn_dict],
+    }
+    flifter = FunctionLifter(raw_exe, cat, enable_lregs=True, enable_flagabi=True)
+    c_code = flifter.lift_function(func_va)
+
+    shard_files = sorted(out_dir.glob("shard_*.c"))
+    if not shard_files:
+        raise FileNotFoundError(f"No shard files found in {out_dir}")
+
+    target_shard = None
+    for sf in shard_files:
+        content = sf.read_text(encoding="utf-8")
+        addrs = [int(m, 16) for m in re.findall(r"void sub_([0-9a-f]{8})\(", content)]
+        if not addrs:
+            continue
+        if min(addrs) <= func_va <= max(addrs):
+            target_shard = sf
+            break
+
+    if target_shard is None:
+        for sf in shard_files:
+            content = sf.read_text(encoding="utf-8")
+            addrs = [int(m, 16) for m in re.findall(r"void sub_([0-9a-f]{8})\(", content)]
+            if addrs and max(addrs) >= func_va:
+                target_shard = sf
+                break
+
+    if target_shard is None:
+        target_shard = shard_files[-1]
+
+    content = target_shard.read_text(encoding="utf-8")
+    fn_name = f"sub_{func_va:08x}"
+    if f"void {fn_name}(CPU *c)" in content:
+        pattern = re.compile(rf"void {fn_name}\(CPU \*c\) \{{.*?^\}}", re.MULTILINE | re.DOTALL)
+        content = pattern.sub(c_code.strip(), content)
+    else:
+        matches = list(re.finditer(r"^void sub_([0-9a-f]{8})\(CPU \*c\)", content, re.MULTILINE))
+        inserted = False
+        for m in matches:
+            other_va = int(m.group(1), 16)
+            if other_va > func_va:
+                pos = m.start()
+                content = content[:pos] + c_code + "\n" + content[pos:]
+                inserted = True
+                break
+        if not inserted:
+            content = content.rstrip() + "\n\n" + c_code + "\n"
+
+    target_shard.write_text(content, encoding="utf-8")
+
+    # Update fntab.h
+    fntab_h = out_dir / "fntab.h"
+    if fntab_h.is_file():
+        h_text = fntab_h.read_text(encoding="utf-8")
+        decl = f"void sub_{func_va:08x}(CPU *c);"
+        if decl not in h_text:
+            matches = list(re.finditer(r"^void sub_([0-9a-f]{8})\(CPU \*c\);", h_text, re.MULTILINE))
+            inserted = False
+            for m in matches:
+                other_va = int(m.group(1), 16)
+                if other_va > func_va:
+                    pos = m.start()
+                    h_text = h_text[:pos] + decl + "\n" + h_text[pos:]
+                    inserted = True
+                    break
+            if not inserted:
+                h_text = h_text.replace("/* Master dispatch table", decl + "\n\n/* Master dispatch table")
+            fntab_h.write_text(h_text, encoding="utf-8")
+
+    # Update fntab.c
+    fntab_c = out_dir / "fntab.c"
+    if fntab_c.is_file():
+        c_text = fntab_c.read_text(encoding="utf-8")
+        slot = func_va - DISPATCH_TEXT_BASE
+        entry = f"    g_dtab[0x{slot:08x}u] = sub_{func_va:08x};"
+        if entry.strip() not in c_text:
+            matches = list(re.finditer(r"^\s+g_dtab\[0x([0-9a-f]{8})u\] = sub_[0-9a-f]{8};", c_text, re.MULTILINE))
+            inserted = False
+            for m in matches:
+                other_slot = int(m.group(1), 16)
+                if other_slot > slot:
+                    pos = m.start()
+                    c_text = c_text[:pos] + entry + "\n" + c_text[pos:]
+                    inserted = True
+                    break
+            if not inserted:
+                c_text = c_text.replace("void fntab_init(void)", entry + "\n}\n\nvoid fntab_init(void)")
+            fntab_c.write_text(c_text, encoding="utf-8")
+
+    return target_shard
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate modular C shards and master dispatch table.")
     parser.add_argument("--num-shards", type=int, default=32, help="Number of C shards (default: 32)")
     parser.add_argument("--out-dir", type=str, default="gen", help="Output directory (default: gen)")
     parser.add_argument("--max-functions", type=int, default=None, help="Optional limit on functions to lift")
+    parser.add_argument("--lift-single", type=lambda x: int(x, 0), default=None, help="VA of single function to lift and update in-place")
     args = parser.parse_args()
 
     cfg_path = WORKSPACE / "config" / "local.json"
@@ -274,6 +387,15 @@ def main() -> None:
     sha256 = hashlib.sha256(raw_exe).hexdigest()
     if sha256 != EXPECTED_NFS_EXE_SHA256:
         sys.exit(f"Executable SHA-256 mismatch: {sha256}")
+
+    out_dir = WORKSPACE / args.out_dir
+
+    if args.lift_single is not None:
+        target_va = args.lift_single
+        print(f"Lifting single function 0x{target_va:08x} from {exe_path.name}...")
+        shard = lift_single_function(target_va, raw_exe, out_dir)
+        print(f"Successfully lifted and updated 0x{target_va:08x} in {shard.name}, fntab.h, and fntab.c.")
+        return
 
     catalog_path = WORKSPACE / "research" / "local" / "phase1" / "catalog.json"
     if not catalog_path.is_file():

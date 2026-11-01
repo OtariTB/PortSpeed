@@ -22,6 +22,8 @@ D3D_CMD_HEADER_SIZE = 8
 # Direct3D 9 Memory Layout Constants
 # ---------------------------------------------------------------------------
 D3D9_DIRECT3DCREATE9_IAT_VA = 0x009675BC
+D3DX9_D3DXVEC3TRANSFORM_IAT_VA = 0x009675DC
+D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA = 0x009675F4
 D3D9_METHOD_BASE_VA = 0x00966500
 D3D9_DEVICE_METHOD_BASE_VA = 0x00966600
 
@@ -698,10 +700,14 @@ class GuestD3D9:
         self.viewport = (0, 0, 1280, 720, 0.0, 1.0)
 
     def init_iat(self) -> None:
-        """Binds Direct3DCreate9, IDirect3D9, and IDirect3DDevice9 into guest memory and dtab."""
-        # 1. Bind Direct3DCreate9 IAT slot at 0x009675bc in .rdata
+        """Binds Direct3DCreate9, D3DXMatrixTranspose, IDirect3D9, and IDirect3DDevice9 into guest memory and dtab."""
+        # 1. Bind Direct3DCreate9, D3DXVec3Transform, and D3DXMatrixTranspose IAT slots in .rdata
         self.mem.write_u32(D3D9_DIRECT3DCREATE9_IAT_VA, D3D9_DIRECT3DCREATE9_IAT_VA)
         self.dtab[D3D9_DIRECT3DCREATE9_IAT_VA] = self.shim_Direct3DCreate9
+        self.mem.write_u32(D3DX9_D3DXVEC3TRANSFORM_IAT_VA, D3DX9_D3DXVEC3TRANSFORM_IAT_VA)
+        self.dtab[D3DX9_D3DXVEC3TRANSFORM_IAT_VA] = self.shim_D3DXVec3Transform
+        self.mem.write_u32(D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA, D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA)
+        self.dtab[D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA] = self.shim_D3DXMatrixTranspose
 
         # 2. Setup IDirect3D9 Vtable at 0x02001000 in heap
         for i in range(len(D3D9_METHODS)):
@@ -748,6 +754,69 @@ class GuestD3D9:
         self.mem.write_u32(D3D9_INSTANCE_VA, D3D9_VTABLE_VA)
         self.mem.write_u32(D3D9_INSTANCE_VA + 4, self.ref_count)
         c.eax = D3D9_INSTANCE_VA
+
+    def shim_D3DXVec3Transform(self, c: Any) -> None:
+        p_out = self.mem.read_u32(c.esp)
+        p_v = self.mem.read_u32(c.esp + 4)
+        p_m = self.mem.read_u32(c.esp + 8)
+        c.esp += 12
+
+        if p_out == 0 or p_v == 0 or p_m == 0:
+            c.eax = 0
+            return
+
+        # Check bounds: must fall within valid guest memory (above null guard 0x00100000, within heap limit 0x28000000)
+        if (p_out < 0x00100000 or p_out + 16 > 0x28000000 or
+            p_v < 0x00100000 or p_v + 12 > 0x28000000 or
+            p_m < 0x00100000 or p_m + 64 > 0x28000000):
+            c.eax = 0
+            return
+
+        def read_f(addr: int) -> float:
+            return struct.unpack('<f', struct.pack('<I', self.mem.read_u32(addr)))[0]
+
+        def write_f(addr: int, val: float) -> None:
+            self.mem.write_u32(addr, struct.unpack('<I', struct.pack('<f', val))[0])
+
+        # Read inputs into local variables before writing to safely handle overlap (p_out == p_v)
+        vx = read_f(p_v + 0)
+        vy = read_f(p_v + 4)
+        vz = read_f(p_v + 8)
+
+        # Row-vector multiplication: [x, y, z, 1] * M
+        rx = vx * read_f(p_m + 0)  + vy * read_f(p_m + 16) + vz * read_f(p_m + 32) + read_f(p_m + 48)
+        ry = vx * read_f(p_m + 4)  + vy * read_f(p_m + 20) + vz * read_f(p_m + 36) + read_f(p_m + 52)
+        rz = vx * read_f(p_m + 8)  + vy * read_f(p_m + 24) + vz * read_f(p_m + 40) + read_f(p_m + 56)
+        rw = vx * read_f(p_m + 12) + vy * read_f(p_m + 28) + vz * read_f(p_m + 44) + read_f(p_m + 60)
+
+        write_f(p_out + 0, rx)
+        write_f(p_out + 4, ry)
+        write_f(p_out + 8, rz)
+        write_f(p_out + 12, rw)
+
+        c.eax = p_out
+
+    def shim_D3DXMatrixTranspose(self, c: Any) -> None:
+        p_out = self.mem.read_u32(c.esp)
+        p_m = self.mem.read_u32(c.esp + 4)
+        c.esp += 8
+
+        if p_out == 0 or p_m == 0:
+            c.eax = 0
+            return
+
+        # Check bounds: must fall within valid guest memory (above null guard 0x00100000, within heap limit 0x28000000)
+        if p_out < 0x00100000 or p_out + 64 > 0x28000000 or p_m < 0x00100000 or p_m + 64 > 0x28000000:
+            c.eax = 0
+            return
+
+        # Copy 16 32-bit floats (64 bytes) to safely handle in-place transposition (p_out == p_m)
+        temp = [self.mem.read_u32(p_m + i * 4) for i in range(16)]
+        for r in range(4):
+            for col in range(4):
+                self.mem.write_u32(p_out + (r * 4 + col) * 4, temp[col * 4 + r])
+
+        c.eax = p_out
 
     def shim_QueryInterface(self, c: Any) -> None:
         p_this = self.mem.read_u32(c.esp)

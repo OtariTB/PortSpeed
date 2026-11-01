@@ -25,6 +25,8 @@ extern "C" {
  * Synthetic method addresses map to unused g_dtab slots in the .text dispatch range.
  * -------------------------------------------------------------------------- */
 #define D3D9_DIRECT3DCREATE9_IAT_VA     0x009675bcu   /* Authentic PE IAT VA in nfs.exe */
+#define D3DX9_D3DXVEC3TRANSFORM_IAT_VA  0x009675dcu   /* Authentic PE IAT VA in nfs.exe (d3dx9_34.dll) */
+#define D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA 0x009675f4u  /* Authentic PE IAT VA in nfs.exe (d3dx9_34.dll) */
 
 /* Synthetic method entry points in g_dtab */
 #define D3D9_METHOD_BASE_VA             0x00966500u   /* 17 IDirect3D9 methods (0x00966500..0x00966540) */
@@ -231,6 +233,8 @@ typedef enum {
  * Direct3D 9 Entrypoint and Shim Functions
  * -------------------------------------------------------------------------- */
 void d3d9_shim_Direct3DCreate9(struct CPU *c);
+void d3d9_shim_D3DXVec3Transform(struct CPU *c);
+void d3d9_shim_D3DXMatrixTranspose(struct CPU *c);
 
 /* IDirect3D9 COM vtable method shims (17 methods) */
 void d3d9_shim_QueryInterface(struct CPU *c);
