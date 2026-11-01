@@ -37,6 +37,7 @@ build/
 web/public/*.wasm
 *.wasm
 *.wat
+tools/toolchain/
 
 # Operating System & IDE artifacts
 .DS_Store

@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__wasm__) || !defined(_WIN32)
+#define _stricmp strcasecmp
+#endif
+
 static boot_status_t g_boot_status = {
     .stage = BOOT_STAGE_UNINITIALIZED,
     .argc = 0,

@@ -4379,6 +4379,7 @@ static void fntab_init_chunk_1(void) {
     g_dtab[0x000f8ce0u] = sub_004f9ce0;
     g_dtab[0x000f8d10u] = sub_004f9d10;
     g_dtab[0x000f8d80u] = sub_004f9d80;
+    g_dtab[0x000f8db0u] = sub_004f9db0;
     g_dtab[0x000f9190u] = sub_004fa190;
     g_dtab[0x000f92c0u] = sub_004fa2c0;
     g_dtab[0x000f92f0u] = sub_004fa2f0;
@@ -4442,6 +4443,7 @@ static void fntab_init_chunk_1(void) {
     g_dtab[0x000fda20u] = sub_004fea20;
     g_dtab[0x000fdaa9u] = sub_004feaa9;
     g_dtab[0x000fdac0u] = sub_004feac0;
+    g_dtab[0x000fdd90u] = sub_004fed90;
     g_dtab[0x000fe460u] = sub_004ff460;
     g_dtab[0x000fe500u] = sub_004ff500;
     g_dtab[0x000fe560u] = sub_004ff560;
@@ -14352,6 +14354,7 @@ static void fntab_init_chunk_5(void) {
     g_dtab[0x002f7c20u] = sub_006f8c20;
     g_dtab[0x002f7c80u] = sub_006f8c80;
     g_dtab[0x002f7ca0u] = sub_006f8ca0;
+    g_dtab[0x002f7d60u] = sub_006f8d60;
     g_dtab[0x002f7d70u] = sub_006f8d70;
     g_dtab[0x002f7e70u] = sub_006f8e70;
     g_dtab[0x002f7ed0u] = sub_006f8ed0;

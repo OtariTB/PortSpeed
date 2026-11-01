@@ -75520,6 +75520,18 @@ c->xmm[0].u64[0] ^= c->xmm[0].u64[0]; c->xmm[0].u64[1] ^= c->xmm[0].u64[1];
     return;
 }
 
+void sub_006f8d60(CPU *c) {
+    LR_ENTER;
+L_006f8d60:
+    RG_(eax) = (uint32_t)(RG_(ecx));
+    { uint32_t _r = (RG_(ecx)) ^ (RG_(ecx)); FLAGS_LOG_M(_r, 32, 0x00u); RG_(ecx) = (uint32_t)(_r); }
+    MR32(RG_(eax)+0x40u) = (RG_(ecx));
+    MR32(RG_(eax)+0x44u) = (RG_(ecx));
+    MR32(RG_(eax)+0x48u) = (RG_(ecx));
+    LR_STORE;
+    return;
+}
+
 void sub_006f8d70(CPU *c) {
     LR_ENTER;
 L_006f8d70:

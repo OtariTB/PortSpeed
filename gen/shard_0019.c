@@ -45202,7 +45202,7 @@ L_00828652:
     PUSH32(0x10u);
     PUSH32(0xa42d30u);
     LR_STORE;
-    sub_00828ebc(c);
+    DISPATCH_CALL(c, 0x00828ebcu);
     LR_RELOAD;
     { uint32_t _r = (RG_(eax)) ^ (RG_(eax)); FLAGS_LOG_M(_r, 32, 0x00u); RG_(eax) = (uint32_t)(_r); }
     MR32(RG_(ebp)+0xffffffe0u) = (RG_(eax));
@@ -45226,12 +45226,13 @@ L_00828684:
     MR32(RG_(ebp)+0xffffffe0u) = (0x1u);
     MR32(RG_(ebp)+0xfffffffcu) = (0xfffffffeu);
     LR_STORE;
-    sub_0082869f(c);
+    DISPATCH_CALL(c, 0x0082869fu);
     LR_RELOAD;
     LR_STORE;
-    sub_00828f01(c);
+    DISPATCH_CALL(c, 0x00828f01u);
     LR_RELOAD;
     LR_STORE;
+    c->esp += 20u;
     return;
 }
 
@@ -46383,47 +46384,30 @@ L_00828eb4:
 }
 
 void sub_00828ebc(CPU *c) {
-    LR_ENTER;
-L_00828ebc:
-    PUSH32(0x828f15u);
-    PUSH32(MR32(c->fs_base));
-    RG_(eax) = (uint32_t)(MR32(RG_(esp)+0x10u));
-    MR32(RG_(esp)+0x10u) = (RG_(ebp));
-    RG_(ebp) = (uint32_t)((RG_(esp)+0x10u));
-    { uint32_t _a = RG_(esp), _b = RG_(eax), _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x00u); RG_(esp) = (uint32_t)(_r); }
-    PUSH32(RG_(ebx));
-    PUSH32(RG_(esi));
-    PUSH32(RG_(edi));
-    RG_(eax) = (uint32_t)(MR32(0xa8be00u));
-    { uint32_t _r = (MR32(RG_(ebp)+0xfffffffcu)) ^ (RG_(eax)); FLAGS_LOG_M(_r, 32, 0x00u); MR32(RG_(ebp)+0xfffffffcu) = (_r); }
-    { uint32_t _r = (RG_(eax)) ^ (RG_(ebp)); FLAGS_LOG_M(_r, 32, 0x00u); RG_(eax) = (uint32_t)(_r); }
-    PUSH32(RG_(eax));
-    MR32(RG_(ebp)+0xffffffe8u) = (RG_(esp));
-    PUSH32(MR32(RG_(ebp)+0xfffffff8u));
-    RG_(eax) = (uint32_t)(MR32(RG_(ebp)+0xfffffffcu));
-    MR32(RG_(ebp)+0xfffffffcu) = (0xfffffffeu);
-    MR32(RG_(ebp)+0xfffffff8u) = (RG_(eax));
-    RG_(eax) = (uint32_t)((RG_(ebp)+0xfffffff0u));
-    MR32(c->fs_base) = (RG_(eax));
-    LR_STORE;
-    return;
+    /* Authentic MSVC __EH_prolog runtime helper */
+    uint32_t scope_table = MR32(c->esp);
+    uint32_t alloc_size  = MR32(c->esp + 4);
+    uint32_t frame_base  = c->esp;
+    uint32_t old_ebp     = c->ebp;
+
+    c->ebp = frame_base;
+    MR32(c->ebp) = old_ebp;
+
+    MR32(c->ebp - 4)  = 0xfffffffeu;
+    MR32(c->ebp - 8)  = scope_table;
+    MR32(c->ebp - 12) = 0x00828f15u;
+    MR32(c->ebp - 16) = MR32(c->fs_base);
+    MR32(c->fs_base)  = c->ebp - 16;
+
+    c->esp = c->ebp - 16 - alloc_size - 16;
 }
 
 void sub_00828f01(CPU *c) {
-    LR_ENTER;
-L_00828f01:
-    RG_(ecx) = (uint32_t)(MR32(RG_(ebp)+0xfffffff0u));
-    MR32(c->fs_base) = (RG_(ecx));
-    { uint32_t _t; POP32(_t); RG_(ecx) = (uint32_t)(_t); }
-    { uint32_t _t; POP32(_t); RG_(edi) = (uint32_t)(_t); }
-    { uint32_t _t; POP32(_t); RG_(edi) = (uint32_t)(_t); }
-    { uint32_t _t; POP32(_t); RG_(esi) = (uint32_t)(_t); }
-    { uint32_t _t; POP32(_t); RG_(ebx) = (uint32_t)(_t); }
-    RG_(esp) = (uint32_t)(RG_(ebp));
-    { uint32_t _t; POP32(_t); RG_(ebp) = (uint32_t)(_t); }
-    PUSH32(RG_(ecx));
-    LR_STORE;
-    return;
+    /* Authentic MSVC __EH_epilog runtime helper */
+    MR32(c->fs_base) = MR32(c->ebp - 16);
+    uint32_t old_ebp = MR32(c->ebp);
+    c->esp = c->ebp + 8;
+    c->ebp = old_ebp;
 }
 
 void sub_00828f38(CPU *c) {

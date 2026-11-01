@@ -22,6 +22,8 @@ from tools.guest_d3d9 import (
     D3D9_DEVICE_METHODS,
     D3D9_DEVICE_VTABLE_VA,
     D3D9_DIRECT3DCREATE9_IAT_VA,
+    D3DX9_D3DXVEC3TRANSFORM_IAT_VA,
+    D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA,
     D3D9_INSTANCE_VA,
     D3D9_METHOD_BASE_VA,
     D3D9_METHODS,
@@ -98,9 +100,16 @@ class TestD3D9Unit(unittest.TestCase):
         c_code = c_path.read_text(encoding="utf-8")
 
         self.assertIn("0x009675bcu", h_code)
+        self.assertIn("0x009675dcu", h_code)
+        self.assertIn("0x009675f4u", h_code)
         self.assertIn("D3D9_METHOD_TOTAL_COUNT", h_code)
         self.assertIn("D3D9_DEV_METHOD_TOTAL_COUNT", h_code)
         self.assertIn("d3d9_shim_Direct3DCreate9", h_code)
+        self.assertIn("d3d9_shim_Direct3DCreate9", c_code)
+        self.assertIn("d3d9_shim_D3DXVec3Transform", h_code)
+        self.assertIn("d3d9_shim_D3DXVec3Transform", c_code)
+        self.assertIn("d3d9_shim_D3DXMatrixTranspose", h_code)
+        self.assertIn("d3d9_shim_D3DXMatrixTranspose", c_code)
         self.assertIn("d3d9_init_iat", h_code)
 
         for name in D3D9_METHODS:
@@ -729,6 +738,273 @@ class TestD3D9Unit(unittest.TestCase):
         self.mem.write_u32(self.cpu.esp + 32, 0)
         self.d3d9.dtab[crt_va](self.cpu)
         self.assertEqual(self.cpu.eax, D3DERR_NOTAVAILABLE)
+
+
+    def test_d3dx_matrix_transpose_non_symmetric(self):
+        """Verifies D3DXMatrixTranspose correctly transposes all 16 elements of a non-symmetric 4x4 float matrix."""
+        p_in = 0x00264000
+        p_out = 0x00264100
+
+        input_floats = [float(i + 1) for i in range(16)]
+        for i, val in enumerate(input_floats):
+            raw_u32 = struct.unpack('<I', struct.pack('<f', val))[0]
+            self.mem.write_u32(p_in + i * 4, raw_u32)
+
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, p_out)
+        self.mem.write_u32(self.cpu.esp + 4, p_in)
+
+        self.d3d9.dtab[D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA](self.cpu)
+
+        self.assertEqual(self.cpu.eax, p_out)
+        self.assertEqual(self.cpu.esp, 0x003FE008)
+
+        expected_floats = [
+            1.0, 5.0, 9.0, 13.0,
+            2.0, 6.0, 10.0, 14.0,
+            3.0, 7.0, 11.0, 15.0,
+            4.0, 8.0, 12.0, 16.0
+        ]
+        out_floats = [
+            struct.unpack('<f', struct.pack('<I', self.mem.read_u32(p_out + i * 4)))[0]
+            for i in range(16)
+        ]
+        self.assertEqual(out_floats, expected_floats)
+
+    def test_d3dx_matrix_transpose_in_place(self):
+        """Verifies in-place transposition (pOut == pM) works without self-overwriting corruption."""
+        p_mat = 0x00264200
+        input_floats = [
+            1.5, -2.5,  3.25,  4.0,
+            5.0,  6.5, -7.5,   8.25,
+            9.5, 10.25, 11.5, 12.125,
+            -13.0, 14.0, 15.0, 16.5
+        ]
+        for i, val in enumerate(input_floats):
+            raw_u32 = struct.unpack('<I', struct.pack('<f', val))[0]
+            self.mem.write_u32(p_mat + i * 4, raw_u32)
+
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, p_mat)
+        self.mem.write_u32(self.cpu.esp + 4, p_mat)
+
+        self.d3d9.dtab[D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, p_mat)
+        self.assertEqual(self.cpu.esp, 0x003FE008)
+
+        expected_transposed = [
+            input_floats[c * 4 + r] for r in range(4) for c in range(4)
+        ]
+        out_floats = [
+            struct.unpack('<f', struct.pack('<I', self.mem.read_u32(p_mat + i * 4)))[0]
+            for i in range(16)
+        ]
+        self.assertEqual(out_floats, expected_transposed)
+
+        # Restore original matrix via secondary transpose
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, p_mat)
+        self.mem.write_u32(self.cpu.esp + 4, p_mat)
+
+        self.d3d9.dtab[D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, p_mat)
+
+        restored_floats = [
+            struct.unpack('<f', struct.pack('<I', self.mem.read_u32(p_mat + i * 4)))[0]
+            for i in range(16)
+        ]
+        self.assertEqual(restored_floats, input_floats)
+
+    def test_d3dx_matrix_transpose_invalid_pointers(self):
+        """Verifies NULL and out-of-bounds pointer safety for D3DXMatrixTranspose."""
+        p_valid = 0x00264000
+
+        # Case 1: pOut == 0 (NULL)
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, 0)
+        self.mem.write_u32(self.cpu.esp + 4, p_valid)
+        self.d3d9.dtab[D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, 0)
+        self.assertEqual(self.cpu.esp, 0x003FE008)
+
+        # Case 2: pM == 0 (NULL)
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, p_valid)
+        self.mem.write_u32(self.cpu.esp + 4, 0)
+        self.d3d9.dtab[D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, 0)
+        self.assertEqual(self.cpu.esp, 0x003FE008)
+
+        # Case 3: Out-of-bounds pointer
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, 0x29000000)
+        self.mem.write_u32(self.cpu.esp + 4, p_valid)
+        self.d3d9.dtab[D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, 0)
+        self.assertEqual(self.cpu.esp, 0x003FE008)
+
+    def test_d3dx_vec3_transform_row_vs_column_vector(self):
+        """Verifies D3DXVec3Transform uses Direct3D row-vector convention (V * M) and translation row."""
+        p_out = 0x00265000
+        p_v   = 0x00265100
+        p_m   = 0x00265200
+
+        # Vector V = (1.0, 0.0, 0.0) -> extended to (1.0, 0.0, 0.0, 1.0)
+        v_floats = [1.0, 0.0, 0.0]
+        for i, val in enumerate(v_floats):
+            self.mem.write_u32(p_v + i * 4, struct.unpack('<I', struct.pack('<f', val))[0])
+
+        # Matrix with distinct rotation and translation components:
+        # Row 0: [ 1.0,  2.0,  0.0, 0.0]
+        # Row 1: [ 3.0,  4.0,  0.0, 0.0]
+        # Row 2: [ 0.0,  0.0,  1.0, 0.0]
+        # Row 3: [10.0, 20.0, 30.0, 1.0] (translation)
+        m_floats = [
+            1.0,  2.0,  0.0, 0.0,
+            3.0,  4.0,  0.0, 0.0,
+            0.0,  0.0,  1.0, 0.0,
+            10.0, 20.0, 30.0, 1.0
+        ]
+        for i, val in enumerate(m_floats):
+            self.mem.write_u32(p_m + i * 4, struct.unpack('<I', struct.pack('<f', val))[0])
+
+        # Win32 __stdcall: pOut at esp, pV at esp + 4, pM at esp + 8
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, p_out)
+        self.mem.write_u32(self.cpu.esp + 4, p_v)
+        self.mem.write_u32(self.cpu.esp + 8, p_m)
+
+        self.d3d9.dtab[D3DX9_D3DXVEC3TRANSFORM_IAT_VA](self.cpu)
+
+        # Calling convention: return pOut in EAX, pop 12 bytes
+        self.assertEqual(self.cpu.eax, p_out)
+        self.assertEqual(self.cpu.esp, 0x003FE00C)
+
+        out = [
+            struct.unpack('<f', struct.pack('<I', self.mem.read_u32(p_out + i * 4)))[0]
+            for i in range(4)
+        ]
+        # Row-vector multiplication [1, 0, 0, 1] * M yields:
+        # X = 1*1 + 0*3 + 0*0 + 1*10 = 11.0
+        # Y = 1*2 + 0*4 + 0*0 + 1*20 = 22.0
+        # Z = 1*0 + 0*0 + 0*1 + 1*30 = 30.0
+        # W = 1*0 + 0*0 + 0*0 + 1*1  = 1.0
+        # (Column-vector M * V would yield X=1.0, Y=3.0, Z=0.0, W=11.0)
+        self.assertEqual(out, [11.0, 22.0, 30.0, 1.0])
+
+    def test_d3dx_vec3_transform_nontrivial_w_and_perspective(self):
+        """Verifies D3DXVec3Transform produces nontrivial W and does NOT perform perspective divide."""
+        p_out = 0x00265300
+        p_v   = 0x00265400
+        p_m   = 0x00265500
+
+        v_floats = [2.0, -3.0, 4.0]
+        for i, val in enumerate(v_floats):
+            self.mem.write_u32(p_v + i * 4, struct.unpack('<I', struct.pack('<f', val))[0])
+
+        # Matrix with projection column producing nontrivial W:
+        m_floats = [
+            1.5,  0.5, -1.0, 2.0,
+            2.0,  3.0,  0.5, 1.0,
+            -1.0, 1.5,  2.0, 3.0,
+            4.0, -2.0,  3.0, 5.0
+        ]
+        for i, val in enumerate(m_floats):
+            self.mem.write_u32(p_m + i * 4, struct.unpack('<I', struct.pack('<f', val))[0])
+
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, p_out)
+        self.mem.write_u32(self.cpu.esp + 4, p_v)
+        self.mem.write_u32(self.cpu.esp + 8, p_m)
+
+        self.d3d9.dtab[D3DX9_D3DXVEC3TRANSFORM_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, p_out)
+        self.assertEqual(self.cpu.esp, 0x003FE00C)
+
+        out = [
+            struct.unpack('<f', struct.pack('<I', self.mem.read_u32(p_out + i * 4)))[0]
+            for i in range(4)
+        ]
+        # X = 2*1.5 + (-3)*2.0 + 4*(-1.0) + 4.0 = -3.0
+        # Y = 2*0.5 + (-3)*3.0 + 4*1.5 + (-2.0) = -4.0
+        # Z = 2*(-1.0) + (-3)*0.5 + 4*2.0 + 3.0 = 7.5
+        # W = 2*2.0 + (-3)*1.0 + 4*3.0 + 5.0    = 18.0
+        self.assertEqual(out, [-3.0, -4.0, 7.5, 18.0])
+
+    def test_d3dx_vec3_transform_overlapping_in_place(self):
+        """Verifies overlapping input/output buffer safety (pOut == pV)."""
+        p_shared = 0x00265600
+        p_m      = 0x00265700
+
+        # Write 3 floats to p_shared
+        v_floats = [1.0, 2.0, 3.0]
+        for i, val in enumerate(v_floats):
+            self.mem.write_u32(p_shared + i * 4, struct.unpack('<I', struct.pack('<f', val))[0])
+
+        m_floats = [
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            5.0, 6.0, 7.0, 1.0
+        ]
+        for i, val in enumerate(m_floats):
+            self.mem.write_u32(p_m + i * 4, struct.unpack('<I', struct.pack('<f', val))[0])
+
+        # Overlapping call: pOut == pV == p_shared
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, p_shared)
+        self.mem.write_u32(self.cpu.esp + 4, p_shared)
+        self.mem.write_u32(self.cpu.esp + 8, p_m)
+
+        self.d3d9.dtab[D3DX9_D3DXVEC3TRANSFORM_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, p_shared)
+        self.assertEqual(self.cpu.esp, 0x003FE00C)
+
+        out = [
+            struct.unpack('<f', struct.pack('<I', self.mem.read_u32(p_shared + i * 4)))[0]
+            for i in range(4)
+        ]
+        self.assertEqual(out, [6.0, 8.0, 10.0, 1.0])
+
+    def test_d3dx_vec3_transform_invalid_pointers(self):
+        """Verifies NULL and out-of-bounds pointer handling for D3DXVec3Transform."""
+        p_valid = 0x00265000
+
+        # NULL pOut
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, 0)
+        self.mem.write_u32(self.cpu.esp + 4, p_valid)
+        self.mem.write_u32(self.cpu.esp + 8, p_valid)
+        self.d3d9.dtab[D3DX9_D3DXVEC3TRANSFORM_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, 0)
+        self.assertEqual(self.cpu.esp, 0x003FE00C)
+
+        # NULL pV
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, p_valid)
+        self.mem.write_u32(self.cpu.esp + 4, 0)
+        self.mem.write_u32(self.cpu.esp + 8, p_valid)
+        self.d3d9.dtab[D3DX9_D3DXVEC3TRANSFORM_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, 0)
+        self.assertEqual(self.cpu.esp, 0x003FE00C)
+
+        # NULL pM
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, p_valid)
+        self.mem.write_u32(self.cpu.esp + 4, p_valid)
+        self.mem.write_u32(self.cpu.esp + 8, 0)
+        self.d3d9.dtab[D3DX9_D3DXVEC3TRANSFORM_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, 0)
+        self.assertEqual(self.cpu.esp, 0x003FE00C)
+
+        # Out-of-bounds pointer
+        self.cpu.esp = 0x003FE000
+        self.mem.write_u32(self.cpu.esp, 0x29000000)
+        self.mem.write_u32(self.cpu.esp + 4, p_valid)
+        self.mem.write_u32(self.cpu.esp + 8, p_valid)
+        self.d3d9.dtab[D3DX9_D3DXVEC3TRANSFORM_IAT_VA](self.cpu)
+        self.assertEqual(self.cpu.eax, 0)
+        self.assertEqual(self.cpu.esp, 0x003FE00C)
 
 
 if __name__ == "__main__":

@@ -186,6 +186,20 @@ class CatalogBuilder:
             if self.in_code(target):
                 seeds.add(target)
 
+        # 6. Indirect constructor callbacks passed as immediate arguments to __ehvec_ctor (sub_00401000)
+        text_off = va_to_offset(self.text_va)
+        text_data = self.raw_exe[text_off : text_off + self.text_size]
+        for i in range(len(text_data) - 5):
+            if text_data[i] == 0xE8:
+                rel = struct.unpack_from('<i', text_data, i + 1)[0]
+                if self.text_va + i + 5 + rel == 0x00401000:
+                    for back in range(1, 35):
+                        pos = i - back
+                        if pos >= 0 and text_data[pos] == 0x68:
+                            imm = struct.unpack_from('<I', text_data, pos + 1)[0]
+                            if self.in_code(imm):
+                                seeds.add(imm)
+
         return seeds
 
     def disassemble_function(

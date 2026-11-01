@@ -160,6 +160,76 @@ void d3d9_shim_Direct3DCreate9(CPU *c) {
 }
 
 /* --------------------------------------------------------------------------
+ * D3DXVec3Transform (d3dx9_34.dll IAT Entrypoint at 0x009675dc)
+ * D3DXVECTOR4* WINAPI D3DXVec3Transform(D3DXVECTOR4 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM)
+ * Transforms (x, y, z, 1) by matrix pM using Direct3D row-vector conventions: V * M.
+ * -------------------------------------------------------------------------- */
+void d3d9_shim_D3DXVec3Transform(CPU *c) {
+    uint32_t pOut = MR32(c->esp);
+    uint32_t pV = MR32(c->esp + 4u);
+    uint32_t pM = MR32(c->esp + 8u);
+    c->esp += 12u; /* __stdcall pop 3 args (12 bytes) */
+
+    if (g_mem == NULL || !guest_is_valid_va(pOut, 16u) || !guest_is_valid_va(pV, 12u) || !guest_is_valid_va(pM, 64u)) {
+        c->eax = 0u;
+        return;
+    }
+
+    /* Read all inputs into local variables before writing to safely handle overlap (pOut == pV) */
+    float vx = MRF32(pV + 0u);
+    float vy = MRF32(pV + 4u);
+    float vz = MRF32(pV + 8u);
+
+    /* Row-vector multiplication: [x, y, z, 1] * M
+     * out.x = x*m11 + y*m21 + z*m31 + 1*m41
+     * out.y = x*m12 + y*m22 + z*m32 + 1*m42
+     * out.z = x*m13 + y*m23 + z*m33 + 1*m43
+     * out.w = x*m14 + y*m24 + z*m34 + 1*m44
+     */
+    float rx = vx * MRF32(pM + 0u)  + vy * MRF32(pM + 16u) + vz * MRF32(pM + 32u) + MRF32(pM + 48u);
+    float ry = vx * MRF32(pM + 4u)  + vy * MRF32(pM + 20u) + vz * MRF32(pM + 36u) + MRF32(pM + 52u);
+    float rz = vx * MRF32(pM + 8u)  + vy * MRF32(pM + 24u) + vz * MRF32(pM + 40u) + MRF32(pM + 56u);
+    float rw = vx * MRF32(pM + 12u) + vy * MRF32(pM + 28u) + vz * MRF32(pM + 44u) + MRF32(pM + 60u);
+
+    MRF32(pOut + 0u)  = rx;
+    MRF32(pOut + 4u)  = ry;
+    MRF32(pOut + 8u)  = rz;
+    MRF32(pOut + 12u) = rw;
+
+    c->eax = pOut;
+}
+
+/* --------------------------------------------------------------------------
+ * D3DXMatrixTranspose (d3dx9_34.dll IAT Entrypoint at 0x009675f4)
+ * D3DXMATRIX* WINAPI D3DXMatrixTranspose(D3DXMATRIX *pOut, const D3DXMATRIX *pM)
+ * -------------------------------------------------------------------------- */
+void d3d9_shim_D3DXMatrixTranspose(CPU *c) {
+    uint32_t pOut = MR32(c->esp);
+    uint32_t pM = MR32(c->esp + 4u);
+    c->esp += 8u; /* __stdcall pop 2 args (8 bytes) */
+
+    if (g_mem == NULL || !guest_is_valid_va(pOut, 64u) || !guest_is_valid_va(pM, 64u)) {
+        c->eax = 0u;
+        return;
+    }
+
+    /* Safely support in-place transposition (pOut == pM) by copying input matrix to temporary buffer */
+    uint32_t temp[16];
+    for (int i = 0; i < 16; ++i) {
+        temp[i] = MR32(pM + (uint32_t)(i * 4));
+    }
+
+    /* Transpose 4x4 row-major matrix: out[row][col] = in[col][row] */
+    for (int r = 0; r < 4; ++r) {
+        for (int col = 0; col < 4; ++col) {
+            MR32(pOut + (uint32_t)((r * 4 + col) * 4)) = temp[col * 4 + r];
+        }
+    }
+
+    c->eax = pOut;
+}
+
+/* --------------------------------------------------------------------------
  * IDirect3D9 COM Vtable Methods (17 methods)
  * -------------------------------------------------------------------------- */
 
@@ -1271,9 +1341,11 @@ static const guest_fn_t s_device_method_handlers[D3D9_DEV_METHOD_TOTAL_COUNT] = 
  * Subsystem Lifecycle
  * -------------------------------------------------------------------------- */
 void d3d9_init_iat(void) {
-    /* 1. Bind Direct3DCreate9 IAT slot at 0x009675bc in .rdata */
+    /* 1. Bind Direct3DCreate9, D3DXVec3Transform, and D3DXMatrixTranspose IAT slots in .rdata */
     if (g_mem != NULL) {
         MR32(D3D9_DIRECT3DCREATE9_IAT_VA) = D3D9_DIRECT3DCREATE9_IAT_VA;
+        MR32(D3DX9_D3DXVEC3TRANSFORM_IAT_VA) = D3DX9_D3DXVEC3TRANSFORM_IAT_VA;
+        MR32(D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA) = D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA;
 
         /* 2. Setup IDirect3D9 COM Vtable at D3D9_VTABLE_VA (0x02001000 in heap) */
         for (uint32_t i = 0; i < D3D9_METHOD_TOTAL_COUNT; ++i) {
@@ -1294,10 +1366,18 @@ void d3d9_init_iat(void) {
         MR32(D3D9_DEVICE_INSTANCE_VA + 4u) = 0u; /* initial device inactive */
     }
 
-    /* 6. Bind Direct3DCreate9 into g_dtab */
+    /* 6. Bind Direct3DCreate9, D3DXVec3Transform, and D3DXMatrixTranspose into g_dtab */
     uint32_t create_idx = D3D9_DIRECT3DCREATE9_IAT_VA - DISPATCH_TEXT_BASE;
     if (create_idx < DISPATCH_TEXT_SIZE) {
         g_dtab[create_idx] = d3d9_shim_Direct3DCreate9;
+    }
+    uint32_t vec3trans_idx = D3DX9_D3DXVEC3TRANSFORM_IAT_VA - DISPATCH_TEXT_BASE;
+    if (vec3trans_idx < DISPATCH_TEXT_SIZE) {
+        g_dtab[vec3trans_idx] = d3d9_shim_D3DXVec3Transform;
+    }
+    uint32_t transpose_idx = D3DX9_D3DXMATRIXTRANSPOSE_IAT_VA - DISPATCH_TEXT_BASE;
+    if (transpose_idx < DISPATCH_TEXT_SIZE) {
+        g_dtab[transpose_idx] = d3d9_shim_D3DXMatrixTranspose;
     }
 
     /* 7. Bind all 17 IDirect3D9 COM vtable methods into g_dtab */

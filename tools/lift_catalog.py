@@ -1075,6 +1075,41 @@ class FunctionLifter:
         old_use_rg = self.lifter.use_rg
         self.lifter.use_rg = enable_lregs
 
+        if func_entry == 0x00828ebc:
+            self.lifter.use_rg = old_use_rg
+            return (
+                "void sub_00828ebc(CPU *c) {\n"
+                "    /* Authentic MSVC __EH_prolog runtime helper */\n"
+                "    uint32_t scope_table = MR32(c->esp);\n"
+                "    uint32_t alloc_size  = MR32(c->esp + 4);\n"
+                "    uint32_t frame_base  = c->esp;\n"
+                "    uint32_t old_ebp     = c->ebp;\n"
+                "\n"
+                "    c->ebp = frame_base;\n"
+                "    MR32(c->ebp) = old_ebp;\n"
+                "\n"
+                "    MR32(c->ebp - 4)  = 0xfffffffeu;\n"
+                "    MR32(c->ebp - 8)  = scope_table;\n"
+                "    MR32(c->ebp - 12) = 0x00828f15u;\n"
+                "    MR32(c->ebp - 16) = MR32(c->fs_base);\n"
+                "    MR32(c->fs_base)  = c->ebp - 16;\n"
+                "\n"
+                "    c->esp = c->ebp - 16 - alloc_size - 16;\n"
+                "}\n"
+            )
+
+        if func_entry == 0x00828f01:
+            self.lifter.use_rg = old_use_rg
+            return (
+                "void sub_00828f01(CPU *c) {\n"
+                "    /* Authentic MSVC __EH_epilog runtime helper */\n"
+                "    MR32(c->fs_base) = MR32(c->ebp - 16);\n"
+                "    uint32_t old_ebp = MR32(c->ebp);\n"
+                "    c->esp = c->ebp + 8;\n"
+                "    c->ebp = old_ebp;\n"
+                "}\n"
+            )
+
         func = self.functions.get(func_entry)
         if not func:
             self.lifter.use_rg = old_use_rg
@@ -1121,6 +1156,8 @@ class FunctionLifter:
                 if m in ("ret", "retf"):
                     if enable_lregs:
                         lines.append("    LR_STORE;")
+                    if ins.operands and ins.operands[0].type == CS_OP_IMM and ins.operands[0].imm > 0:
+                        lines.append(f"    c->esp += {ins.operands[0].imm}u;")
                     lines.append("    return;")
                     has_terminal = True
                     continue
