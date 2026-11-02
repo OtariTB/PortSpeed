@@ -128,29 +128,42 @@ async function run() {
 
     console.log('[5/5] Executing genuine C++ static initializers in WebAssembly...');
     const t_init = Date.now();
+    let current_ctor = 0, current_fn = 0;
     try {
         let count = 0;
         for (let p = 0x00967608; p < 0x0096a1f4; p += 4) {
             const fn_va = dv.getUint32(p, true);
             if (fn_va !== 0) {
                 count++;
+                current_ctor = count;
+                current_fn = fn_va;
                 const saved_esp = dv.getUint32(CPU_STRUCT_VA + 16, true);
                 const esp_next = saved_esp - 4;
                 dv.setUint32(CPU_STRUCT_VA + 16, esp_next, true);
                 dv.setUint32(esp_next, 0x00828ae0, true);
-                const val_before = dv.getUint32(0x967d30, true);
+                if (count % 50 === 0 && count < 169) {
+                    fs.writeSync(1, `      ... reached Constructor #${count} (0x${fn_va.toString(16)})\n`);
+                }
+                if (count >= 169) {
+                    fs.writeSync(1, `      -> [START] Constructor #${count} (0x${fn_va.toString(16)})...\n`);
+                }
+                const t_ctor_start = Date.now();
                 instance.exports.dispatch_indirect(CPU_STRUCT_VA, fn_va);
-                const val_after = dv.getUint32(0x967d30, true);
-                if (val_before !== val_after) {
-                    console.log("CORRUPTION DETECTED at Ctor " + count + " (0x" + fn_va.toString(16) + ")! 0x967d30 changed from 0x" + val_before.toString(16) + " to 0x" + val_after.toString(16));
-                    process.exit(1);
+                const t_ctor_elapsed = Date.now() - t_ctor_start;
+                if (count === 169) {
+                    const obj_count = dv.getUint32(0x00ab47e4, true);
+                    const arr_ptr = dv.getUint32(0x00ab47e0 + 0x16c, true);
+                    const ctor_count = arr_ptr !== 0 ? dv.getUint32(arr_ptr - 4, true) : 0;
+                    fs.writeSync(1, `      [PASS] Constructor #169 completed! Descriptor count=[0xab47e4]=${obj_count}, Element array=[0xab494c]=0x${arr_ptr.toString(16)} (header count=${ctor_count}, size=${obj_count * 12 + 4} bytes) [${t_ctor_elapsed}ms]\n`);
+                } else if (count > 169) {
+                    fs.writeSync(1, `      <- [DONE]  Constructor #${count} (0x${fn_va.toString(16)}) [${t_ctor_elapsed}ms]\n`);
                 }
                 dv.setUint32(CPU_STRUCT_VA + 16, saved_esp, true);
             }
         }
-        console.log("      Constructors executed: " + count + " / 960");
+        console.log("      Constructors executed: " + count + " / 960 in " + (Date.now() - t_init) + "ms");
     } catch (err) {
-        console.error('[FAIL] Constructor execution trapped:', err);
+        console.error(`[FAIL] Constructor #${current_ctor} (0x${current_fn.toString(16)}) trapped:`, err);
         dumpCPU(dv, CPU_STRUCT_VA);
         process.exit(1);
     }

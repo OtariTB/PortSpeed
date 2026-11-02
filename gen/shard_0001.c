@@ -65286,6 +65286,10 @@ L_00463e86:
     return;
 }
 
+void sub_00463d70(CPU *c) {
+    sub_01a11e20(c);
+}
+
 void sub_00463e90(CPU *c) {
     LR_ENTER;
 L_00463e90:
@@ -65293,8 +65297,8 @@ L_00463e90:
     PUSH32(RG_(ebx));
     PUSH32(RG_(ebp));
     RG_(ebp) = (uint32_t)(MR32(RG_(esp)+0x10u));
-    /* Unspliced SecuROM bridge: cmp ebp, dword ptr [0x19f0720]; jmp 0x463e9d */
-    { uint32_t _a = RG_(ebp), _b = MR32(0x19f0720u), _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x00u); }
+    /* Unspliced SecuROM bridge: cmp ebp, 0x400 (bChunk small-block threshold); jmp 0x463e9d */
+    { uint32_t _a = RG_(ebp), _b = 0x400u, _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x00u); }
 L_00463e9d:
     PUSH32(RG_(esi));
     PUSH32(RG_(edi));
@@ -65339,7 +65343,7 @@ L_00463ecd:
     { uint32_t _t; POP32(_t); RG_(ebp) = (uint32_t)(_t); }
     { uint32_t _t; POP32(_t); RG_(ebx) = (uint32_t)(_t); }
     { uint32_t _t; POP32(_t); RG_(ecx) = (uint32_t)(_t); }
-    RG_(esp) += 8u;
+    RG_(esp) += 12u;
     LR_STORE;
     return;
 L_00463eee:
@@ -65361,7 +65365,7 @@ L_00463ef6:
     { uint32_t _t; POP32(_t); RG_(ebp) = (uint32_t)(_t); }
     { uint32_t _t; POP32(_t); RG_(ebx) = (uint32_t)(_t); }
     { uint32_t _t; POP32(_t); RG_(ecx) = (uint32_t)(_t); }
-    RG_(esp) += 8u;
+    RG_(esp) += 12u;
     LR_STORE;
     return;
 }

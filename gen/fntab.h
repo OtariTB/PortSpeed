@@ -1790,6 +1790,7 @@ void sub_004638d0(CPU *c);
 void sub_00463920(CPU *c);
 void sub_00463ae0(CPU *c);
 void sub_00463d10(CPU *c);
+void sub_00463d70(CPU *c);
 void sub_00463dcf(CPU *c);
 void sub_00463de0(CPU *c);
 void sub_00463e90(CPU *c);

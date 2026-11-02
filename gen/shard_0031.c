@@ -11433,12 +11433,9 @@ void sub_01a11e20(CPU *c) {
 L_01a11e20:
     PUSH32(RG_(edi));
     RG_(eax) = (uint32_t)((RG_(esi)+0x220u));
-    { uint32_t _a = MR32(0x1a6afedu), _r = _a - 1u; FLAGS_SUB_M(_a, 1u, _r, 32, (0x08u & ~F_CF)); MR32(0x1a6afedu) = (_r); }
-    if (CC_E) goto L_01a6b669;
 L_01a11e33:
     RG_(ecx) = (uint32_t)(0x40u);
     { uint32_t _r = (RG_(edi)) ^ (RG_(edi)); FLAGS_LOG_M(_r, 32, 0x00u); RG_(edi) = (uint32_t)(_r); }
-    RG_(edi) = (uint32_t)(RG_(edi));
 L_01a11e3c:
     MR32(RG_(eax)+0xfffffde0u) = (RG_(edi));
     MR32(RG_(eax)+0xffffff00u) = (RG_(edi));
@@ -11451,14 +11448,27 @@ L_01a11e52:
     RG_(edx) = (uint32_t)(MR32(RG_(esi)+0x114u));
     PUSH32(RG_(eax));
     RG_(eax) = (uint32_t)(RG_(esi));
-    PUSH32(0x1a11e78u);
-    PUSH32(0x463f70u);
+    PUSH32(0x01a11e78u);
+    LR_STORE;
+    DISPATCH_CALL(c, 0x00463f70u);
+    LR_RELOAD;
+L_01a11e78:
+    MR32(RG_(esi)+0x110u) = (RG_(eax));
+    { uint32_t _a = MR32(RG_(esi)+0x104u), _b = RG_(edi), _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x00u); }
+    if (CC_BE) goto L_01a11eab;
+L_01a11e86:
+    if (RG_(eax) != 0u) {
+        MR32(RG_(eax)) = (RG_(edi));
+        RG_(ecx) = (uint32_t)(MR32(RG_(esi)+0x110u));
+        RG_(edx) = (uint32_t)(MR32(RG_(esi)+0x114u));
+        MR32(RG_(ecx)+4u) = (RG_(edx));
+    }
+L_01a11eab:
+    MR8(RG_(esi)+0x10cu) = 1u;
+    { uint32_t _t; POP32(_t); RG_(edi) = (uint32_t)(_t); }
     RG_(esp) += 4u;
     LR_STORE;
     return;
-L_01a6b669:
-    MR32(0x1a6afedu) = (0x1c1u);
-    goto L_01a11e33;
 }
 
 void sub_01a11ec0(CPU *c) {
