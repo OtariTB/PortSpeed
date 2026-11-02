@@ -4,6 +4,58 @@
 #define PROSTREET_LREGS 1
 #include "gen/fntab.h"
 
+
+static inline int guest_is_valid_va(uint32_t va, uint32_t size) {
+    if (size == 0) return 1;
+    uint64_t end = (uint64_t)va + (uint64_t)size;
+    return (va >= 0x00100000u) && (end <= 0x28000000u);
+}
+
+static inline uint32_t bstring_hash(const uint8_t *k, uint32_t length, uint32_t initval) {
+    uint32_t a = 0x9e3779b9u, b = 0x9e3779b9u, c = initval;
+    uint32_t len = length;
+    while (len >= 12) {
+        a += (uint32_t)k[0] | ((uint32_t)k[1] << 8) | ((uint32_t)k[2] << 16) | ((uint32_t)k[3] << 24);
+        b += (uint32_t)k[4] | ((uint32_t)k[5] << 8) | ((uint32_t)k[6] << 16) | ((uint32_t)k[7] << 24);
+        c += (uint32_t)k[8] | ((uint32_t)k[9] << 8) | ((uint32_t)k[10] << 16) | ((uint32_t)k[11] << 24);
+        a = (a - b - c) ^ (c >> 13);
+        b = (b - c - a) ^ (a << 8);
+        c = (c - a - b) ^ (b >> 13);
+        a = (a - b - c) ^ (c >> 12);
+        b = (b - c - a) ^ (a << 16);
+        c = (c - a - b) ^ (b >> 5);
+        a = (a - b - c) ^ (c >> 3);
+        b = (b - c - a) ^ (a << 10);
+        c = (c - a - b) ^ (b >> 15);
+        k += 12;
+        len -= 12;
+    }
+    c += length;
+    switch (len) {
+    case 11: c += ((uint32_t)k[10]) << 24;
+    case 10: c += ((uint32_t)k[9]) << 16;
+    case 9:  c += ((uint32_t)k[8]) << 8;
+    case 8:  b += ((uint32_t)k[7]) << 24;
+    case 7:  b += ((uint32_t)k[6]) << 16;
+    case 6:  b += ((uint32_t)k[5]) << 8;
+    case 5:  b += (uint32_t)k[4];
+    case 4:  a += ((uint32_t)k[3]) << 24;
+    case 3:  a += ((uint32_t)k[2]) << 16;
+    case 2:  a += ((uint32_t)k[1]) << 8;
+    case 1:  a += (uint32_t)k[0];
+    }
+    a = (a - b - c) ^ (c >> 13);
+    b = (b - c - a) ^ (a << 8);
+    c = (c - a - b) ^ (b >> 13);
+    a = (a - b - c) ^ (c >> 12);
+    b = (b - c - a) ^ (a << 16);
+    c = (c - a - b) ^ (b >> 5);
+    a = (a - b - c) ^ (c >> 3);
+    b = (b - c - a) ^ (a << 10);
+    c = (c - a - b) ^ (b >> 15);
+    return c;
+}
+
 void sub_0051f370(CPU *c) {
     LR_ENTER;
 L_0051f370:
@@ -20824,17 +20876,15 @@ L_0052a7e0:
 }
 
 void sub_0052a7f0(CPU *c) {
-    LR_ENTER;
-L_0052a7f0:
-    PUSH32(RG_(ecx));
-    RG_(edx) = (uint32_t)(MR32(RG_(esp)+0x8u));
-    { uint32_t _a = RG_(edx), _b = 0xcu, _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x00u); }
-    PUSH32(RG_(ebx));
-    PUSH32(RG_(ebp));
-    PUSH32(RG_(esi));
-    PUSH32(RG_(edi));
-    LR_STORE;
-    DISPATCH_TAIL(c, 0x00478ae3u);
+    uint32_t k_va = MR32(c->esp + 4u);
+    uint32_t len = MR32(c->esp + 8u);
+    uint32_t initval = c->eax;
+    if (!k_va || !guest_is_valid_va(k_va, len)) {
+        c->eax = 0u;
+    } else {
+        c->eax = bstring_hash((const uint8_t*)(g_mem + k_va), len, initval);
+    }
+    c->esp += 4u;
 }
 
 void sub_0052aa00(CPU *c) {
@@ -21725,34 +21775,15 @@ L_0052b8b0:
 }
 
 void sub_0052b8d0(CPU *c) {
-    LR_ENTER;
-L_0052b8d0:
-    RG_(ecx) = (uint32_t)(MR32(RG_(esp)+0x4u));
-    { uint32_t _r = (RG_(ecx)) & (RG_(ecx)); FLAGS_LOG_M(_r, 32, 0x08u); }
-    if (CC_E) goto L_0052b8fd;
-L_0052b8d8:
-    { uint32_t _a = MR8(RG_(ecx)), _b = 0x0u, _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 8, 0x08u); }
-    if (CC_E) goto L_0052b8fd;
-L_0052b8dd:
-    RG_(eax) = (uint32_t)(RG_(ecx));
-    PUSH32(RG_(esi));
-    RG_(esi) = (uint32_t)((RG_(eax)+0x1u));
-L_0052b8e3:
-    RG_(edx) = (RG_(edx) & 0xffffff00u) | (uint32_t)((MR8(RG_(eax))) & 0xffu);
-    { uint32_t _a = RG_(eax), _b = 0x1u, _r = _a + _b; FLAGS_ADD_M(_a, _b, _r, 32, 0x00u); RG_(eax) = (uint32_t)(_r); }
-    { uint32_t _r = ((uint8_t)RG_(edx)) & ((uint8_t)RG_(edx)); FLAGS_LOG_M(_r, 8, 0x08u); }
-    if (CC_NE) goto L_0052b8e3;
-L_0052b8ec:
-    { uint32_t _a = RG_(eax), _b = RG_(esi), _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x00u); RG_(eax) = (uint32_t)(_r); }
-    { uint32_t _t; POP32(_t); RG_(esi) = (uint32_t)(_t); }
-    MR32(RG_(esp)+0x4u) = (RG_(eax));
-    LR_STORE;
-    DISPATCH_TAIL(c, 0x0049da3cu);
-L_0052b8fd:
-    { uint32_t _r = (RG_(eax)) ^ (RG_(eax)); FLAGS_LOG_M(_r, 32, 0x00u); RG_(eax) = (uint32_t)(_r); }
-    RG_(esp) += 4u;
-    LR_STORE;
-    return;
+    uint32_t str_va = MR32(c->esp + 4u);
+    if (!str_va || !guest_is_valid_va(str_va, 1) || MR8(str_va) == 0) {
+        c->eax = 0u;
+    } else {
+        uint32_t len = 0;
+        while (guest_is_valid_va(str_va + len, 1) && MR8(str_va + len) != 0) len++;
+        c->eax = bstring_hash((const uint8_t*)(g_mem + str_va), len, 0xabcdef00u);
+    }
+    c->esp += 4u;
 }
 
 void sub_0052b900(CPU *c) {
@@ -25699,7 +25730,7 @@ L_0052eaa1:
     RG_(esi) = (uint32_t)(RG_(ecx));
     { uint32_t _s = (0xcu) & 31u; if (_s) { uint32_t _v = RG_(esi); uint32_t _r = (_v >> _s) & 0xffffffffu; RG_(cf) = (_v >> (_s - 1)) & 1u; FLAGS_LOG_M(_r, 32, 0x00u); RG_(esi) = (uint32_t)(_r); } }
     { uint32_t _a = MR32(0x1a6a54cu), _r = _a - 1u; FLAGS_SUB_M(_a, 1u, _r, 32, (0x08u & ~F_CF)); MR32(0x1a6a54cu) = (_r); }
-    if (CC_E) { LR_STORE; DISPATCH_TAIL(c, 0x00564a73u); }
+    if (CC_E) { MR32(0x1a6a54cu) = 0x1f8u; }
     RG_(edx) = (uint32_t)(RG_(ecx));
     { uint32_t _a = RG_(esi), _b = RG_(ecx), _r = _a + _b; FLAGS_ADD_M(_a, _b, _r, 32, 0x00u); RG_(esi) = (uint32_t)(_r); }
     { uint32_t _s = (0x6u) & 31u; if (_s) { uint32_t _v = RG_(edx); uint32_t _r = (_v >> _s) & 0xffffffffu; RG_(cf) = (_v >> (_s - 1)) & 1u; FLAGS_LOG_M(_r, 32, 0x00u); RG_(edx) = (uint32_t)(_r); } }

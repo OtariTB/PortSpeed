@@ -127115,6 +127115,19 @@ L_007223a8:
     return;
 }
 
+void sub_007223b0(CPU *c) {
+    LR_ENTER;
+L_007223b0:
+    RG_(eax) = RG_(ecx);
+    MR32(RG_(eax) + 4u) = 0u;
+    MR32(RG_(eax) + 8u) = 0u;
+    MR32(RG_(eax) + 0xcu) = 0u;
+    MR32(RG_(eax)) = 0x9932f0u;
+    RG_(esp) += 4u;
+    LR_STORE;
+    return;
+}
+
 void sub_007223d0(CPU *c) {
     LR_ENTER;
 L_007223d0:

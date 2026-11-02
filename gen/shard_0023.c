@@ -116930,6 +116930,16 @@ L_00900080:
     DISPATCH_TAIL(c, 0xc586e166u);
 }
 
+void sub_009006c0(CPU *c) {
+    LR_ENTER;
+L_009006c0:
+    RG_(eax) = RG_(ecx);
+    MR32(RG_(eax) + 4u) = 0xfffffffd;
+    RG_(esp) += 4u;
+    LR_STORE;
+    return;
+}
+
 void sub_009006d0(CPU *c) {
     LR_ENTER;
 L_009006d0:
