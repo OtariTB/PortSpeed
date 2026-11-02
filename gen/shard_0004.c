@@ -31070,6 +31070,7 @@ L_004f9de7:
     PUSH32(RG_(eax));
     PUSH32(RG_(ecx));
     RG_(ecx) = (uint32_t)(0xabb060u);
+    PUSH32(0x004f9e01u);
     LR_STORE;
     DISPATCH_CALL(c, 0x00463f10u);
     LR_RELOAD;
@@ -31088,6 +31089,7 @@ L_004f9e10:
     PUSH32(RG_(ecx));
     PUSH32(RG_(eax));
     RG_(ecx) = (uint32_t)(0xabb060u);
+    PUSH32(0x004f9e2au);
     LR_STORE;
     DISPATCH_CALL(c, 0x00463f10u);
     LR_RELOAD;
@@ -36617,6 +36619,7 @@ L_004fed90:
     MR32(RG_(esi)+0x8u) = (0x9ee914u);
     PUSH32(0x9ee914u);
     MR32(RG_(esi)) = (0xffffffffu);
+    PUSH32(0x004fedd5u);
     LR_STORE;
     DISPATCH_CALL(c, 0x0052b8d0u);
     LR_RELOAD;
@@ -36635,6 +36638,7 @@ L_004fed90:
     RG_(ecx) = (uint32_t)(RG_(esi));
     MR8(RG_(esp)+0x18u) = (0x1u);
     MR32(RG_(esi)+0x54u) = (RG_(edi));
+    PUSH32(0x004fee0du);
     LR_STORE;
     DISPATCH_CALL(c, 0x004fe670u);
     LR_RELOAD;

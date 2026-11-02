@@ -59843,6 +59843,20 @@ L_00783d80:
     return;
 }
 
+void sub_00783de0(CPU *c) {
+    LR_ENTER;
+L_00783de0:
+    RG_(eax) = (uint32_t)(RG_(ecx));
+    { uint32_t _r = (RG_(ecx)) ^ (RG_(ecx)); FLAGS_LOG_M(_r, 32, 0x00u); RG_(ecx) = (uint32_t)(_r); }
+    MR32(RG_(eax)+0x4u) = (RG_(ecx));
+    MR32(RG_(eax)+0x8u) = (RG_(ecx));
+    MR32(RG_(eax)+0xcu) = (RG_(ecx));
+    MR32(RG_(eax)) = (0x998068u);
+    RG_(esp) += 4u;
+    LR_STORE;
+    return;
+}
+
 void sub_00783e00(CPU *c) {
     LR_ENTER;
 L_00783e00:
@@ -59867,6 +59881,13 @@ L_00783e18:
     RG_(esp) += 8u;
     LR_STORE;
     return;
+}
+
+void sub_00783e30(CPU *c) {
+    LR_ENTER;
+L_00783e30:
+    LR_STORE;
+    DISPATCH_TAIL(c, 0x00783d20u);
 }
 
 void sub_00783e40(CPU *c) {

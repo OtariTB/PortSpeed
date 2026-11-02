@@ -36258,6 +36258,7 @@ L_007c9a40:
 
 void sub_007c9a50(CPU *c) {
     LR_ENTER;
+    goto L_007c9a50;
 L_007c58f0:
     PUSH32(RG_(ecx));
     PUSH32(RG_(esi));

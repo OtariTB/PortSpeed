@@ -9016,8 +9016,13 @@ L_00436470:
     { uint32_t _a = RG_(esi), _b = 0x3u, _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x09u); }
     if (CC_A) goto L_004364a4;
 L_0043647a:
-    LR_STORE;
-    DISPATCH_TAIL(c, MR32(RG_(esi)*4+0x4364d4u));
+    switch (RG_(esi)) {
+        case 0: goto L_004364a4;
+        case 1: goto L_00436481;
+        case 2: goto L_00436491;
+        case 3: goto L_004364a1;
+        default: goto L_004364a4;
+    }
 L_00436481:
     RG_(esi) = (uint32_t)(MR32(RG_(eax)+0x4u));
     { uint32_t _r = (RG_(esi)) & (0x1ffcu); FLAGS_LOG_M(_r, 32, 0x00u); RG_(esi) = (uint32_t)(_r); }
@@ -54012,6 +54017,12 @@ void sub_0045a920(CPU *c) {
 L_0045a920:
     PUSH32(RG_(esi));
     RG_(esi) = (uint32_t)(RG_(ecx));
+    if (RG_(esi) == 0u) {
+        { uint32_t _t; POP32(_t); RG_(esi) = (uint32_t)(_t); }
+        RG_(esp) += 4u;
+        LR_STORE;
+        return;
+    }
     RG_(eax) = (uint32_t)(MR32(RG_(esi)+0x14u));
     { uint32_t _r = (RG_(eax)) & (RG_(eax)); FLAGS_LOG_M(_r, 32, 0x30u); }
     if (CC_L) goto L_0045a93e;

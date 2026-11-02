@@ -71,7 +71,7 @@ console.log('[Test 1] sub_00828ebc (__EH_prolog) Frame & SEH Node Construction')
     // Call sub_00828ebc
     exp.sub_00828ebc(CPU_VA);
 
-    const frameBase = initialEsp - 8;
+    const frameBase = initialEsp - 4;
     assert.equal(getEbp(), frameBase, 'EBP must equal frame base (where scope_table was pushed)');
     assert.equal(dv.getUint32(frameBase, true), initialEbp, '[ebp] must store caller old EBP');
     assert.equal(dv.getUint32(frameBase - 4, true), 0xfffffffe, '[ebp - 4] must be initial trylevel -2');
@@ -96,7 +96,7 @@ console.log('[Test 2] sub_00828f01 (__EH_epilog) Frame Tear-down & Stack Restora
     assert.equal(dv.getUint32(TEB_VA, true), prevSehHead, 'fs:[0] must be restored to previous SEH head');
     assert.equal(getEbp(), initialEbp, 'EBP must be restored to caller initial EBP');
 
-    const expectedRestoredEsp = 0x003fee00; // frameBase (0x003fedf8) + 8 = 0x003fee00
+    const expectedRestoredEsp = 0x003fee04; // frameBase (0x003fedfc) + 8 = 0x003fee04
     assert.equal(getEsp(), expectedRestoredEsp, 'ESP must be balanced back to caller argument base (frameBase + 8)');
     console.log('  PASS: fs:[0] unlinked, EBP restored, ESP balanced to argument base.');
 }

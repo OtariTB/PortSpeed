@@ -86,7 +86,8 @@ int boot_engine(const uint8_t *pe_bytes, size_t pe_size, int argc, const char **
 
 PROSTREET_WASM_EXPORT int prostreet_main(int argc, const char **argv);
 PROSTREET_WASM_EXPORT uint8_t *prostreet_get_guest_memory(void);
-PROSTREET_WASM_EXPORT int prostreet_tick(void);
+PROSTREET_WASM_EXPORT int prostreet_tick(uint32_t dt_us);
+PROSTREET_WASM_EXPORT uint32_t prostreet_get_tick_esp(void);
 #endif
 
 #ifdef __cplusplus

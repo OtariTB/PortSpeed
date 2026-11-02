@@ -62683,6 +62683,35 @@ L_004e03ab:
     return;
 }
 
+void sub_004e03c0(CPU *c) {
+    /* Authentic sub_004e03c0 (thiscall default ctor):
+     * Zeroes an 8-byte structure at c->ecx.
+     * Returns this in c->eax.
+     * Pops return address (c->esp += 4).
+     */
+    uint32_t this_ptr = c->ecx;
+    MR32(this_ptr + 0u) = 0u;
+    MR32(this_ptr + 4u) = 0u;
+    c->eax = this_ptr;
+    c->esp += 4u;
+}
+
+void sub_004e03d0(CPU *c) {
+    /* Authentic sub_004e03d0 (thiscall dtor):
+     * If obj at c->ecx + 4 is non-null, calls deleting dtor with flag 1.
+     */
+    uint32_t obj = MR32(c->ecx + 4u);
+    if (obj != 0u) {
+        uint32_t vtbl = MR32(obj);
+        uint32_t dtor = MR32(vtbl);
+        c->ecx = obj;
+        GUEST_PUSH32(c, 1u);
+        GUEST_PUSH32(c, 0x004e03dfu);
+        DISPATCH_CALL(c, dtor);
+    }
+    c->esp += 4u;
+}
+
 void sub_004e0450(CPU *c) {
     LR_ENTER;
 L_004e0450:

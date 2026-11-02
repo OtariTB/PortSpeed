@@ -86,6 +86,7 @@ GAME_EXPORTS = [
     "initterm_install_hooks",
     "initterm_run_exit_destructors",
     "fntab_init",
+    "fntab_count",
     "guest_memory_init",
     "g_dtab",
     "dispatch_indirect",
@@ -96,6 +97,7 @@ GAME_EXPORTS = [
     "prostreet_main",
     "prostreet_get_guest_memory",
     "prostreet_tick",
+    "prostreet_get_tick_esp",
 ]
 
 GAME_CFLAGS = [
@@ -108,14 +110,16 @@ GAME_CFLAGS = [
     "-I.",
     "-Iruntime",
     "-Iinclude",
+    "-DPROSTREET_PORT=1",
+    "-DPROSTREET_LREGS=1",
 ]
 
 GAME_LDFLAGS = [
     "-target", "wasm32-wasi",
     "-mexec-model=reactor",
-    "-Wl,--initial-memory=2c000000",   # 704 MB (0x2c000000)
-    "-Wl,--max-memory=2c000000",
-    "-Wl,--global-base=28000000",      # 640 MB (0x28000000) - places g_dtab & BSS above 640MB guest heap
+    "-Wl,--initial-memory=738197504",   # 704 MB (0x2c000000)
+    "-Wl,--max-memory=738197504",
+    "-Wl,--global-base=671088640",      # 640 MB (0x28000000) - places g_dtab & BSS above 640MB guest heap
     "-Wl,-z,stack-size=65536",          # 64 KB WASM stack in null-guard page
 ] + [f"-Wl,--export={exp}" for exp in GAME_EXPORTS]
 
@@ -177,7 +181,7 @@ def detect_toolchain(custom_cc: str | None = None) -> ToolchainInfo:
     toolchain_root = ROOT_DIR / "work" / "toolchain"
     if toolchain_root.is_dir():
         for candidate in toolchain_root.rglob("clang*"):
-            if candidate.is_file() and candidate.suffix in ("", ".exe"):
+            if candidate.is_file() and candidate.name.lower() in ("clang.exe", "clang"):
                 ver = _get_version(str(candidate))
                 return ToolchainInfo("wasi-sdk", candidate, None, ver)
 
@@ -396,12 +400,12 @@ def compile_single_source(src: Path, obj: Path, cc: str, flags: list[str], cache
     return True, f"[OK]    {src.name}"
 
 
-def compile_file_zig(src: Path, obj: Path) -> tuple[str, bool, float, str]:
+def compile_file(src: Path, obj: Path, cc_cmd: list[str]) -> tuple[str, bool, float, str]:
     t0 = time.time()
     if obj.exists() and obj.stat().st_size > 0 and obj.stat().st_mtime >= src.stat().st_mtime:
         return src.name, True, 0.0, "cached"
 
-    cmd = [str(ZIG_CC), "cc"] + GAME_CFLAGS + ["-c", str(src), "-o", str(obj)]
+    cmd = cc_cmd + GAME_CFLAGS + ["-c", str(src), "-o", str(obj)]
     res = subprocess.run(cmd, cwd=str(ROOT_DIR), capture_output=True, text=True)
     dt = time.time() - t0
     if res.returncode != 0:
@@ -409,10 +413,17 @@ def compile_file_zig(src: Path, obj: Path) -> tuple[str, bool, float, str]:
     return src.name, True, dt, ""
 
 
-def build_game_wasm(jobs: int = 4) -> int:
-    """Compiles all 32 lifted x86 C99 shards and runtime into build/game.wasm using Zig."""
-    if not ZIG_CC.exists():
-        print(f"[ERROR] Zig toolchain not found at: {ZIG_CC}")
+def build_game_wasm(jobs: int = 4, custom_cc: str | None = None) -> int:
+    """Compiles all 32 lifted x86 C99 shards and runtime into build/game.wasm."""
+    toolchain = detect_toolchain(custom_cc)
+    if ZIG_CC.is_file():
+        cc_cmd = [str(ZIG_CC), "cc"]
+        toolchain_name = "Zig 0.13.0"
+    elif toolchain.kind in ("wasi-sdk", "clang", "custom") and toolchain.cc_path.is_file():
+        cc_cmd = [str(toolchain.cc_path)]
+        toolchain_name = f"WASI-SDK Clang ({toolchain.version_str})"
+    else:
+        print(f"[ERROR] No WebAssembly C compiler found (checked Zig and WASI-SDK).")
         return 1
 
     OBJ_DIR.mkdir(parents=True, exist_ok=True)
@@ -435,8 +446,8 @@ def build_game_wasm(jobs: int = 4) -> int:
     all_sources = runtime_sources + shard_sources
 
     print(f"=== PortSpeed WebAssembly Build Pipeline ===")
-    print(f"Toolchain:   Zig 0.13.0 (Clang 18 + wasm-ld)")
-    print(f"Target:      wasm32-wasi (Musl libc)")
+    print(f"Toolchain:   {toolchain_name}")
+    print(f"Target:      wasm32-wasi")
     print(f"Sources:     {len(all_sources)} compilation units ({len(runtime_sources)} runtime/fntab, {len(shard_sources)} shards)")
     print(f"Output:      {OUTPUT_WASM}")
     print(f"Concurrency: {jobs} parallel compilation workers")
@@ -445,7 +456,7 @@ def build_game_wasm(jobs: int = 4) -> int:
     tasks = [(src, OBJ_DIR / (src.stem + ".o")) for src in all_sources]
     failed = False
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as executor:
-        futures = {executor.submit(compile_file_zig, src, obj): src.name for src, obj in tasks}
+        futures = {executor.submit(compile_file, src, obj, cc_cmd): src.name for src, obj in tasks}
         for fut in concurrent.futures.as_completed(futures):
             name, ok, dt, msg = fut.result()
             if not ok:
@@ -465,7 +476,7 @@ def build_game_wasm(jobs: int = 4) -> int:
     t_link = time.time()
 
     all_objs = [str(OBJ_DIR / (src.stem + ".o")) for src in all_sources]
-    link_cmd = [str(ZIG_CC), "cc"] + GAME_LDFLAGS + ["-o", str(OUTPUT_WASM)] + all_objs
+    link_cmd = cc_cmd + GAME_LDFLAGS + ["-o", str(OUTPUT_WASM)] + all_objs
 
     res = subprocess.run(link_cmd, cwd=str(ROOT_DIR), capture_output=True, text=True)
     t_link_elapsed = time.time() - t_link
@@ -515,9 +526,10 @@ def main():
         print("  2. cd emsdk && emsdk install latest && emsdk activate latest")
         return 0
 
-    # Default build mode: If --game or if Zig toolchain is present and --synthetic-wasm not explicitly asked
-    if args.game or (ZIG_CC.is_file() and not args.synthetic_wasm and not args.dry_run and not args.cc):
-        return build_game_wasm(jobs=args.jobs)
+    # Default build mode: If --game or if a valid WebAssembly toolchain is present and --synthetic-wasm not explicitly asked
+    toolchain = detect_toolchain(args.cc)
+    if args.game or ((ZIG_CC.is_file() or toolchain.kind != "none") and not args.synthetic_wasm and not args.dry_run and not args.check and not args.setup):
+        return build_game_wasm(jobs=args.jobs, custom_cc=args.cc)
 
     print("=====================================================================")
     print(" PortSpeed WebAssembly Compilation Pipeline")

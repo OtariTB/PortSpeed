@@ -614,6 +614,7 @@ void win32_shim_DispatchMessageA(CPU *c) {
         c->esp -= 4; MR32(c->esp) = wp;
         c->esp -= 4; MR32(c->esp) = msg;
         c->esp -= 4; MR32(c->esp) = hwnd;
+        c->esp -= 4; MR32(c->esp) = 0x00828ae0u; /* Return address for __stdcall WndProc */
         DISPATCH_CALL(c, g_wnd_proc);
         c->esp = old_esp;
     } else {

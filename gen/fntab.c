@@ -3900,6 +3900,8 @@ static void fntab_init_chunk_1(void) {
     g_dtab[0x000df2c0u] = sub_004e02c0;
     g_dtab[0x000df360u] = sub_004e0360;
     g_dtab[0x000df380u] = sub_004e0380;
+    g_dtab[0x000df3c0u] = sub_004e03c0;
+    g_dtab[0x000df3d0u] = sub_004e03d0;
     g_dtab[0x000df450u] = sub_004e0450;
     g_dtab[0x000df500u] = sub_004e0500;
     g_dtab[0x000df570u] = sub_004e0570;
@@ -16429,7 +16431,9 @@ static void fntab_init_chunk_6(void) {
     g_dtab[0x00382ce0u] = sub_00783ce0;
     g_dtab[0x00382d20u] = sub_00783d20;
     g_dtab[0x00382d80u] = sub_00783d80;
+    g_dtab[0x00382de0u] = sub_00783de0;
     g_dtab[0x00382e00u] = sub_00783e00;
+    g_dtab[0x00382e30u] = sub_00783e30;
     g_dtab[0x00382e40u] = sub_00783e40;
     g_dtab[0x00383430u] = sub_00784430;
     g_dtab[0x00383565u] = sub_00784565;

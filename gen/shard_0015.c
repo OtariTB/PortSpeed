@@ -69973,11 +69973,52 @@ L_007567a8:
 }
 
 void sub_007567b0(CPU *c) {
-    LR_ENTER;
-L_007567b0:
-    { uint32_t _a = RG_(esp), _b = 0x14u, _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x00u); RG_(esp) = (uint32_t)(_r); }
-    LR_STORE;
-    DISPATCH_TAIL(c, 0x00453ddcu);
+    /* Authentic sub_007567b0 (stdcall, ret 0x10):
+     * [c->esp + 0] = return address
+     * [c->esp + 4] = array pointer
+     * [c->esp + 8] = count
+     * [c->esp + 12] = arg3 (type / id value)
+     * [c->esp + 16] = name string pointer (e.g. "DUMMY_SKIN")
+     */
+    uint32_t arr_va   = MR32(c->esp + 4u);
+    uint32_t count    = MR32(c->esp + 8u);
+    uint32_t arg3_val = MR32(c->esp + 12u);
+    uint32_t name_va  = MR32(c->esp + 16u);
+
+    const char *prefix = (const char *)(g_mem + name_va);
+    size_t plen = strlen(prefix);
+
+    for (uint32_t i = 0; i < count; ++i) {
+        char name_buf[64];
+        size_t cp_len = plen;
+        if (cp_len >= sizeof(name_buf) - 16) cp_len = sizeof(name_buf) - 16;
+        memcpy(name_buf, prefix, cp_len);
+        char *p = name_buf + cp_len;
+        uint32_t num = i + 1u;
+        char tmp[16];
+        int tlen = 0;
+        do {
+            tmp[tlen++] = (char)('0' + (num % 10u));
+            num /= 10u;
+        } while (num > 0u);
+        while (tlen > 0) {
+            *p++ = tmp[--tlen];
+        }
+        *p = '\0';
+
+        uint32_t h = 0xffffffffu;
+        for (const char *s = name_buf; *s; ++s) {
+            h = (h << 5) + h + (uint8_t)*s;
+        }
+
+        uint32_t elem_va = arr_va + i * 16u;
+        MR32(elem_va + 0u)  = h;
+        MR32(elem_va + 4u)  = 0u;
+        MR32(elem_va + 8u)  = arg3_val;
+        MR32(elem_va + 12u) = 0u;
+    }
+
+    c->esp += 20u; /* pop return address (4) + 16 bytes args (ret 0x10) */
 }
 
 void sub_00756825(CPU *c) {

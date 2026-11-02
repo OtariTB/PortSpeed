@@ -8,12 +8,14 @@
 void hook_sub_0082851b(CPU *c) {
     /* sub_0082851b is the authentic __cdecl atexit / __onexit registration helper:
      *   int __cdecl sub_0082851b(void (*dtor)(void));
-     * Arg 0 is at c->esp.
+     * At entry: [c->esp] is return address, [c->esp + 4] is Arg 0 (dtor).
      * Returns 0 on success, non-zero on failure.
+     * Callee pops return address.
      */
-    uint32_t dtor_va = MR32(c->esp);
+    uint32_t dtor_va = MR32(c->esp + 4u);
     uint32_t res = crt_register_onexit(dtor_va);
     c->eax = res ? 0 : (uint32_t)-1;
+    c->esp += 4u;
 }
 
 void initterm_install_hooks(void) {

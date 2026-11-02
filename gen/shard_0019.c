@@ -44797,7 +44797,9 @@ L_00828460:
     { uint32_t _a = RG_(ecx), _b = MR32(0xa8be00u), _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x08u); }
     if (CC_NE) goto L_0082846a;
 L_00828468:
-    /* Unsupported: repz ret  (Unsupported mnemonic: repz ret ()) */
+    RG_(esp) += 4u;
+    LR_STORE;
+    return;
 L_0082846a:
     goto L_00828da4;
 L_00828da4:
@@ -45197,43 +45199,20 @@ L_0082864c:
 }
 
 void sub_00828652(CPU *c) {
-    LR_ENTER;
-L_00828652:
-    PUSH32(0x10u);
-    PUSH32(0xa42d30u);
-    LR_STORE;
-    DISPATCH_CALL(c, 0x00828ebcu);
-    LR_RELOAD;
-    { uint32_t _r = (RG_(eax)) ^ (RG_(eax)); FLAGS_LOG_M(_r, 32, 0x00u); RG_(eax) = (uint32_t)(_r); }
-    MR32(RG_(ebp)+0xffffffe0u) = (RG_(eax));
-    MR32(RG_(ebp)+0xfffffffcu) = (RG_(eax));
-    MR32(RG_(ebp)+0xffffffe4u) = (RG_(eax));
-L_00828669:
-    RG_(eax) = (uint32_t)(MR32(RG_(ebp)+0xffffffe4u));
-    { uint32_t _a = RG_(eax), _b = MR32(RG_(ebp)+0x10u), _r = _a - _b; FLAGS_SUB_M(_a, _b, _r, 32, 0x30u); }
-    if (CC_GE) goto L_00828684;
-L_00828671:
-    RG_(esi) = (uint32_t)(MR32(RG_(ebp)+0x8u));
-    RG_(ecx) = (uint32_t)(RG_(esi));
-    LR_STORE;
-    DISPATCH_CALL(c, MR32(RG_(ebp)+0x14u));
-    LR_RELOAD;
-    { uint32_t _a = RG_(esi), _b = MR32(RG_(ebp)+0xcu), _r = _a + _b; FLAGS_ADD_M(_a, _b, _r, 32, 0x00u); RG_(esi) = (uint32_t)(_r); }
-    MR32(RG_(ebp)+0x8u) = (RG_(esi));
-    { uint32_t _a = MR32(RG_(ebp)+0xffffffe4u), _r = _a + 1u; FLAGS_ADD_M(_a, 1u, _r, 32, (0x00u & ~F_CF)); MR32(RG_(ebp)+0xffffffe4u) = (_r); }
-    goto L_00828669;
-L_00828684:
-    MR32(RG_(ebp)+0xffffffe0u) = (0x1u);
-    MR32(RG_(ebp)+0xfffffffcu) = (0xfffffffeu);
-    LR_STORE;
-    DISPATCH_CALL(c, 0x0082869fu);
-    LR_RELOAD;
-    LR_STORE;
-    DISPATCH_CALL(c, 0x00828f01u);
-    LR_RELOAD;
-    LR_STORE;
-    c->esp += 20u;
-    return;
+    /* Authentic MSVC __ehvec_ctor array constructor iterator */
+    uint32_t ptr   = MR32(c->esp + 4);
+    uint32_t size  = MR32(c->esp + 8);
+    uint32_t count = MR32(c->esp + 12);
+    uint32_t ctor  = MR32(c->esp + 16);
+
+    for (uint32_t i = 0; i < count; ++i) {
+        c->ecx = ptr + i * size;
+        c->esp -= 4u;
+        MR32(c->esp) = 0x00828679u;
+        DISPATCH_CALL(c, ctor);
+    }
+
+    c->esp += 24u;
 }
 
 void sub_0082869f(CPU *c) {
@@ -46387,7 +46366,7 @@ void sub_00828ebc(CPU *c) {
     /* Authentic MSVC __EH_prolog runtime helper */
     uint32_t scope_table = MR32(c->esp);
     uint32_t alloc_size  = MR32(c->esp + 4);
-    uint32_t frame_base  = c->esp;
+    uint32_t frame_base  = c->esp + 4u;
     uint32_t old_ebp     = c->ebp;
 
     c->ebp = frame_base;

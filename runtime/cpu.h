@@ -121,6 +121,7 @@ static inline guest_fn_t dispatch_fast(uint32_t a) {
 
 #define DISPATCH_CALL(c_, t_) do { \
     uint32_t _dc = (uint32_t)(t_); \
+    if (_dc >= 0x00967000u && _dc <= 0x00967650u) { (c_)->esp += 4u; } \
     guest_fn_t _df = dispatch_fast(_dc); \
     if (_df) _df(c_); else dispatch_indirect((c_), _dc); \
 } while (0)
@@ -128,12 +129,17 @@ static inline guest_fn_t dispatch_fast(uint32_t a) {
 #ifdef __wasm__
 #define DISPATCH_TAIL(c_, t_) { \
     uint32_t _dc = (uint32_t)(t_); \
+    if (_dc >= 0x00967000u && _dc <= 0x00967650u) { (c_)->esp += 4u; } \
     guest_fn_t _df = dispatch_fast(_dc); \
     if (_df) { __attribute__((musttail)) return _df(c_); } \
     (c_)->eip = _dc; __attribute__((musttail)) return dispatch_tail(c_); \
 }
 #else
-#define DISPATCH_TAIL(c_, t_) { dispatch_indirect((c_), (uint32_t)(t_)); return; }
+#define DISPATCH_TAIL(c_, t_) { \
+    uint32_t _dc = (uint32_t)(t_); \
+    if (_dc >= 0x00967000u && _dc <= 0x00967650u) { (c_)->esp += 4u; } \
+    dispatch_indirect((c_), _dc); return; \
+}
 #endif
 
 /* --------------------------------------------------------------------------
