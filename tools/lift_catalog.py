@@ -1039,6 +1039,7 @@ class FunctionLifter:
         catalog: dict[str, Any],
         enable_lregs: bool = False,
         enable_flagabi: bool = True,
+        trampoline_data: dict[str, Any] | None = None,
     ) -> None:
         self.raw_exe = raw_exe
         self.catalog = catalog
@@ -1049,10 +1050,47 @@ class FunctionLifter:
         self.enable_lregs = enable_lregs
         self.enable_flagabi = enable_flagabi
 
+        # SecuROM Trampoline Mapping (site_va -> target_va)
+        self.trampoline_map: dict[int, int] = {}
+        if trampoline_data is None:
+            t_path = WORKSPACE / "research" / "local" / "phase1" / "securom_trampolines.json"
+            if t_path.is_file():
+                try:
+                    trampoline_data = json.loads(t_path.read_text(encoding="utf-8"))
+                except Exception:
+                    trampoline_data = None
+
+        if trampoline_data and "trampolines" in trampoline_data:
+            raw_map = {
+                int(t["site_va"]): int(t["target_va"])
+                for t in trampoline_data["trampolines"]
+                if "site_va" in t and "target_va" in t
+            }
+            # Resolve chained trampolines iteratively
+            for s_va in raw_map:
+                visited = set()
+                cur = s_va
+                while cur in raw_map and cur not in visited:
+                    visited.add(cur)
+                    cur = raw_map[cur]
+                self.trampoline_map[s_va] = cur
+
         # Capstone disassembler
         self.cs = Cs(CS_ARCH_X86, CS_MODE_32)
         self.cs.detail = True
         self.lifter = InstructionLifter(self.cs, use_rg=enable_lregs)
+
+    def resolve_target(self, dest: int) -> tuple[int, bool]:
+        """Resolve a destination VA through SecuROM trampoline mappings.
+
+        Returns (target_va, is_resolved).
+        Only redirects if the resolved target is confirmed to exist in self.functions.
+        """
+        if dest in self.trampoline_map:
+            target = self.trampoline_map[dest]
+            if target in self.functions:
+                return (target, True)
+        return (dest, False)
 
     def read_bytes(self, va: int, size: int) -> bytes:
         off = va_to_offset(va)
@@ -1252,10 +1290,13 @@ class FunctionLifter:
                 # Unconditional Jumps
                 if m == "jmp":
                     if ins.operands and ins.operands[0].type == CS_OP_IMM:
-                        dest = ins.operands[0].imm
-                        if dest in block_starts:
-                            lines.append(f"    goto L_{dest:08x};")
+                        raw_dest = ins.operands[0].imm
+                        if raw_dest in block_starts:
+                            lines.append(f"    goto L_{raw_dest:08x};")
                         else:
+                            dest, is_resolved = self.resolve_target(raw_dest)
+                            if is_resolved:
+                                lines.append(f"    /* Resolved SecuROM trampoline jmp 0x{raw_dest:08x} -> 0x{dest:08x} */")
                             if enable_lregs:
                                 lines.append("    LR_STORE;")
                             lines.append(f"    DISPATCH_TAIL(c, 0x{dest:08x}u);")
@@ -1295,11 +1336,14 @@ class FunctionLifter:
                     else:
                         lines.append(f"    c->esp -= 4u; MR32(c->esp) = 0x{ret_addr:08x}u;")
                     if ins.operands and ins.operands[0].type == CS_OP_IMM:
-                        dest = ins.operands[0].imm
+                        raw_dest = ins.operands[0].imm
+                        dest, is_resolved = self.resolve_target(raw_dest)
                         hooked_vas = {0x0070f640, 0x004afea0, 0x00828b43, 0x00828fee, 0x0082851b}
                         if dest in hooked_vas:
                             lines.append(f"    DISPATCH_CALL(c, 0x{dest:08x}u);")
                         elif dest in self.functions:
+                            if is_resolved:
+                                lines.append(f"    /* Resolved SecuROM trampoline call 0x{raw_dest:08x} -> 0x{dest:08x} */")
                             lines.append(f"    sub_{dest:08x}(c);")
                         else:
                             lines.append(f"    DISPATCH_CALL(c, 0x{dest:08x}u);")
