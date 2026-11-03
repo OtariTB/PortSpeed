@@ -116,6 +116,54 @@ static inline uint32_t host_to_guest(const void *ptr) {
 }
 
 /**
+ * Computes Jenkins 96-bit mix hash used by EA bString::Hash.
+ */
+static inline uint32_t bstring_hash(const uint8_t *k, uint32_t length, uint32_t initval) {
+    uint32_t a = 0x9e3779b9u, b = 0x9e3779b9u, c = initval;
+    uint32_t len = length;
+    while (len >= 12) {
+        a += (uint32_t)k[0] | ((uint32_t)k[1] << 8) | ((uint32_t)k[2] << 16) | ((uint32_t)k[3] << 24);
+        b += (uint32_t)k[4] | ((uint32_t)k[5] << 8) | ((uint32_t)k[6] << 16) | ((uint32_t)k[7] << 24);
+        c += (uint32_t)k[8] | ((uint32_t)k[9] << 8) | ((uint32_t)k[10] << 16) | ((uint32_t)k[11] << 24);
+        a = (a - b - c) ^ (c >> 13);
+        b = (b - c - a) ^ (a << 8);
+        c = (c - a - b) ^ (b >> 13);
+        a = (a - b - c) ^ (c >> 12);
+        b = (b - c - a) ^ (a << 16);
+        c = (c - a - b) ^ (b >> 5);
+        a = (a - b - c) ^ (c >> 3);
+        b = (b - c - a) ^ (a << 10);
+        c = (c - a - b) ^ (b >> 15);
+        k += 12;
+        len -= 12;
+    }
+    c += length;
+    switch (len) {
+    case 11: c += ((uint32_t)k[10]) << 24;
+    case 10: c += ((uint32_t)k[9]) << 16;
+    case 9:  c += ((uint32_t)k[8]) << 8;
+    case 8:  b += ((uint32_t)k[7]) << 24;
+    case 7:  b += ((uint32_t)k[6]) << 16;
+    case 6:  b += ((uint32_t)k[5]) << 8;
+    case 5:  b += (uint32_t)k[4];
+    case 4:  a += ((uint32_t)k[3]) << 24;
+    case 3:  a += ((uint32_t)k[2]) << 16;
+    case 2:  a += ((uint32_t)k[1]) << 8;
+    case 1:  a += (uint32_t)k[0];
+    }
+    a = (a - b - c) ^ (c >> 13);
+    b = (b - c - a) ^ (a << 8);
+    c = (c - a - b) ^ (b >> 13);
+    a = (a - b - c) ^ (c >> 12);
+    b = (b - c - a) ^ (a << 16);
+    c = (c - a - b) ^ (b >> 5);
+    a = (a - b - c) ^ (c >> 3);
+    b = (b - c - a) ^ (a << 10);
+    c = (c - a - b) ^ (b >> 15);
+    return c;
+}
+
+/**
  * Parses PE sections from raw_exe bytes and copies initialized sections
  * (.text, .rdata, .data, .tls, .rsrc, etc.) into linear memory at their authentic VAs,
  * zeroing uninitialized BSS space.

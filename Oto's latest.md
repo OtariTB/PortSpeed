@@ -1,195 +1,119 @@
 # PortSpeed — Engineering Handoff & Architecture Status
 
 **Document:** `Oto's latest.md`<br>
-**Date:** November 2, 2026<br>
+**Date:** November 3, 2026<br>
 **Repository:** `https://github.com/OtariTB/PortSpeed.git` (branch `main`)<br>
 **Target:** PC v1.1 `nfs.exe` (SHA-256: `66d0ef062b8cf145941656f71d5300ee7a18413eb44747c0c1b72e5927ad7404`)
 
 ---
 
-## 1. Project Overview & Operational Status
+## 1. Executive Summary & Architecture Decision
 
-### 1.1 Objective
-**PortSpeed** is an engineering project to statically recompile the authentic 32-bit x86 Windows executable of *Need for Speed: ProStreet* (PC v1.1) to execute natively in modern web browsers via WebAssembly and browser graphics APIs (WebGL2 / WebGPU). Rather than full instruction emulation or writing a clean-room remake, PortSpeed lifts x86 machine instructions into standard portable C99, links them against a custom Win32/CRT/Direct3D compatibility layer, and executes native WebAssembly modules.
-
-### 1.2 Core Architecture
-1. **1:1 Guest Linear Memory Space (`0x00000000..0x28000000`)**:
-   - `0x00000000..0x00100000`: Null-page guard.
-   - `0x00100000..0x00200000`: Thread Environment Block (TEB) & Thread Local Storage (TLS).
-   - `0x00200000..0x00400000`: 2 MB Guest stack (`ESP` initialized to `0x003FF000`).
-   - `0x00401000..0x00967000`: Authentic `.text` segment.
-   - `0x00967000..0x00a4a000`: Authentic `.rdata` segment (vtables, strings, IAT, initializer tables).
-   - `0x00a4a000..0x01010000`: Authentic `.data` segment (global variables, BSS).
-   - `0x01010000..0x01011000`: `.tls` template.
-   - `0x01011000..0x010ea000`: `.rsrc` segment (containing 34 compiled D3DX9 `.fx` shader effects).
-   - `0x02000000..0x28000000`: Dynamic guest heap (up to 640 MB).
-2. **Master Dispatch Table (`g_dtab`)**:
-   - Direct $O(1)$ function pointer array of 5,660,672 entries covering `0x00401000..0x00967000`.
-   - Dispatches lifted functions and imported IAT shims with zero hash map lookup overhead.
-3. **C99 Platform Shims**:
-   - **CRT (`MSVCR80.dll`)**: 156 shims covering memory allocation, string operations, math, FPU control, and C++ static initialization.
-   - **Win32 (`KERNEL32.dll`, `USER32.dll`, `ADVAPI32.dll`)**: 198 shims for synchronization (critical sections, mutexes, semaphores), registry queries, timing (QPC, `GetTickCount`), window messaging, and TLS allocation.
-   - **Direct3D 9 COM Shim**: Implements `Direct3DCreate9` and `IDirect3DDevice9` vtables in C99, serializing D3D9 API calls into a lockless shared-memory ring buffer (64-byte control header).
-4. **Browser WebGL2 Command Consumer (`web/src/d3d9_consumer.ts`)**:
-   - Reads the shared-memory command ring buffer packet stream.
-   - Converts D3D9 viewport coordinates, manages D3D9 render states, and executes corresponding WebGL2 draw/clear commands.
+### 1.1 Option C: Systematic Lifter Correctness & SecuROM Splice Normalization
+Following an in-depth architectural feasibility audit comparing PortSpeed against related recompilation projects (*th0mk/nfsu2-web* and *austynoconnor/most-wanted-web*), the team formally adopted **Option C**:
+- **Preserves Existing Architecture:**
+  - Strictly **no** CPU emulation, full-system emulation, or synthetic/fake gameplay physics.
+  - Preserves PortSpeed's high-performance 1:1 guest linear memory layout (640 MB arena at `0x00000000..0x28000000`).
+  - Preserves the direct $O(1)$ master dispatch table (`g_dtab` of 5,660,672 entries covering `0x00401000..0x00967000`).
+  - Preserves the entire C99 platform runtime (`runtime/`) shimming MSVCR80, Win32, and Direct3D 9.
+  - Preserves the TypeScript / WebGL2 browser frontend and command ring-buffer consumer (`web/`).
+- **Lifter & Generator Focus:** Replaces ad-hoc shard edits with systematic, generator-level transformations in `tools/lift_catalog.py` and `tools/generate_shards.py` to ensure all manual recoveries, instruction lifters, and DRM resolutions survive clean regenerations.
 
 ---
 
-## 2. Chronological Engineering Progress: Today's Development Session
+## 2. Key Accomplishments This Session
 
-### 2.1 Constructor Callback Discovery & Static Recompilation Pipeline
-- **Problem**: In genuine game initialization, `sub_00401000` (`__ehvec_ctor`) iterates over object arrays and invokes constructor callbacks. Because functions such as `0x006f8d60` were passed as data pointers (`push 0x006f8d60`) rather than direct `call` destinations, they were omitted from the initial 31,995 static catalog functions.
-- **Pipeline Improvement**:
-  - Implemented single-function lifting in `tools/generate_shards.py` (`lift_single_function`) and `tools/lift_ctor_callback.py`.
-  - Disassembled and lifted `0x006f8d60` directly from original `nfs.exe` bytes into `gen/shard_0014.c`, generating entries in `gen/fntab.h` and `gen/fntab.c`.
-  - Audited 21 additional callback sites invoked by `sub_00401000`, identifying genuine function targets (`0x004fed90`, `0x004f9db0`, etc.).
+### 2.1 SecuROM Trampoline Resolution (2,151 Registered Destinations)
+- **Authentic Database:** Loaded all 2,153 verified SecuROM trampoline mappings from `research/local/phase1/securom_trampolines.json`.
+- **Direct Call & Tail-Jump Redirection:** Updated `InstructionLifter` in `tools/lift_catalog.py` to resolve direct `call` and `jmp` sites pointing to SecuROM trampoline stubs into their confirmed catalog function targets.
+- **Master Dispatch Table Registration:** Extended `tools/generate_shards.py` to emit `fntab_init_trampolines()` in `gen/fntab.c`. At startup, **2,151** valid trampoline destinations are registered directly into `g_dtab`, guaranteeing that both direct calls and indirect/vtable calls to trampoline sites resolve with $O(1)$ zero overhead.
+- **Targeted Regression Suite:** Created `tests/test_trampoline_resolution.py` covering database loading, chained trampolines, confirmed target redirection, missing target protection, and unchanged normal calls. All 7 tests pass (100% green in 0.028s).
 
-### 2.2 Authentic Unicorn Startup Diagnostic vs Statically Recompiled WASM
-> [!IMPORTANT]
-> **Crucial Technical Distinction: Unicorn Emulation vs WASM Static Recompilation**
-> - In Unicorn Engine 2.1.4, code executes as genuine x86 machine instructions on an emulated CPU with hardware x86 CALL/RET semantics (automatic stack push/pop of 4-byte return addresses).
-> - Under Unicorn diagnostics (`tools/boot_diagnostics.py`), all **960 non-null static constructors** successfully completed without trapping.
-> - **This result was an emulation milestone, NOT a WebAssembly milestone.**
-> - Statically recompiled C99 code running in WebAssembly does not automatically use hardware x86 CALL frames, as explained below.
+### 2.2 Preservation Architecture (`tools/manual_overrides.py`)
+- Created `tools/manual_overrides.py` as the canonical source of truth for all manually recovered routines.
+- Hooked `MANUAL_RECOVERIES` directly into `FunctionLifter.lift_function()` in `tools/lift_catalog.py`.
+- **All 35 manual overrides now survive 100% of future shard regenerations**:
+  - `bChunk` allocator (`sub_00463e90`)
+  - Fastmem routines (`sub_00435eb0`, `sub_00436130`, `sub_00463f10`, `sub_00464e70`, `sub_00465020`, `sub_01a11e20`)
+  - Fastmem initialization (`sub_00463d70`)
+  - String operations (`sub_004dd540`, `sub_0052a7f0`, `sub_0052b8d0`)
+  - DRM and platform bypasses (`sub_0070f600`, `sub_0070f640`, `sub_008975c3`)
+  - SEH handlers (`sub_00828ebc`, `sub_00828f01`)
+  - All 9 missing static constructor helpers (`0x00463d70`, `0x004e03d0`, `0x004f9db0`, `0x004fed90`, `0x00634490`, `0x007223b0`, `0x00783de0`, `0x00783e30`, `0x009006c0`).
 
-### 2.3 Direct3D 9 Extension Shims: D3DXMatrixTranspose & D3DXVec3Transform
-- During static constructor execution in Unicorn, constructor #274 halted on missing `d3dx9_34.dll` IAT entries.
-- Implemented and validated authentic C99 shims:
-  - `D3DXMatrixTranspose` at IAT slot `0x009675f4`: Transposes 4x4 matrix elements, supports in-place transposition safely (`pOut == pM`), and returns `pOut` in EAX.
-  - `D3DXVec3Transform` at IAT slot `0x009675dc`: Transforms `(x, y, z, 1.0f)` by a 4x4 matrix using Direct3D row-vector conventions, writing a 4-component vector `(x', y', z', w')` and returning `pOut` in EAX.
-- Both shims were bound into `g_dtab` and verified with non-symmetric and in-place unit tests.
-
-### 2.4 Monolithic C99-to-WASM Build Pipeline (`build/game.wasm`)
-- Created automated build tool `tools/build_wasm.py` using Zig 0.13.0 (`clang 18` + `wasm-ld`).
-- Target: `wasm32-wasi` (reactor model).
-- Memory layout:
-  - `--initial-memory=2c000000` (704 MB).
-  - `--global-base=28000000` (640 MB): Places `g_dtab` (22.6 MB) and WASI libc BSS data above the 640 MB guest address space, leaving `0x00000000..0x28000000` completely clean and identical to guest virtual memory.
-  - `-z stack-size=65536` (64 KB host stack in the null-page guard).
-- All 32 shards and 7 runtime units link into a single **44.25 MB** binary: [`build/game.wasm`](file:///c:/Users/tabat/OneDrive/Desktop/NFS-PortStreet-Project/build/game.wasm).
-
-### 2.5 First Genuine WASM Runtime Crash & Root Cause Analysis
-- Executing `build/game.wasm` under Node.js WASI (`tests/test_game_wasm.mjs`) produced the first genuine WebAssembly runtime crash:
+### 2.3 Systemic `MUL` Instruction Lifter
+- **Problem**: In constructor #169, `sub_0063b500` previously failed to lift the `mul edx` mnemonic (`/* Unsupported: mul ... */`), leaving `EAX` uncomputed and triggering an arithmetic overflow request of `0xFFFFFFFF` bytes, causing an unconstrained 40-minute hang.
+- **Solution**: Implemented bit-exact 8-bit, 16-bit, and 32-bit unsigned `mul` instruction lifting with authentic Carry (CF) and Overflow (OF) flag calculation in `InstructionLifter` in `tools/lift_catalog.py`.
+- **Verification**: Verified generated code in `gen/shard_0010.c`:
+  ```c
+  uint64_t _p = (uint64_t)RG_(eax) * (uint64_t)(RG_(edx));
+  RG_(eax) = (uint32_t)_p;
+  RG_(edx) = (uint32_t)(_p >> 32);
+  c->eflags = (c->eflags & ~(F_CF | F_OF)) | (RG_(edx) != 0 ? (F_CF | F_OF) : 0);
   ```
-  RuntimeError: memory access out of bounds
-      at game.wasm.sub_00828652
-      at game.wasm.sub_00959c30
-      at game.wasm.initterm_run_cpp_constructors
-  ```
-- **Root Cause Analysis**:
-  1. `sub_00959c30` pushes 5 arguments (`pArray`, `count`, `size`, `pCtor`, `pDtor`) and calls `sub_00828652` (`__ehvec_ctor`).
-  2. `sub_00828652` pushes `alloc_size = 0x10` and `pScopeTable = 0xa42d30` and calls `sub_00828ebc` (`__EH_prolog`).
-  3. In x86 assembly, `__EH_prolog` is an internal MSVC routine that expects hardware `CALL` return addresses on the stack. Without them, `sub_00828ebc` read `pArray` (`0x00aaeea0`) as `alloc_size`, clobbered `pArray` with `ebp = 0`, and subtracted `0xaaeea0` from `esp`.
-  4. When `sub_00828652` resumed, accessing local variables at `[ebp - 0x20]` with `EBP == 0` attempted to write to `0xffffffe0`, triggering an immediate WASM linear memory bounds trap.
-  5. In addition, the callee-cleanup instruction `ret 0x14` at the end of `sub_00828652` was lifted as plain `return;` in `tools/lift_catalog.py`, ignoring the immediate operand and failing to pop arguments.
 
-### 2.6 The `ret <imm16>` & SEH Prologue / Epilogue Fixes
-1. **`ret <imm16>` Lifter Correction**:
-   Updated `tools/lift_catalog.py` to inspect `ins.operands` on `ret`/`retf` and emit `c->esp += imm16;` before `return;`.
-2. **Authentic C99 `__EH_prolog` (`sub_00828ebc`)**:
-   - Computes `frame_base = c->esp`.
-   - Sets `c->ebp = frame_base` and saves caller's `EBP` at `[frame_base]`.
-   - Guarantees `[ebp + 8]` is `arg 1`, `[ebp + 0xc]` is `size`, `[ebp + 0x10]` is `count`, `[ebp + 0x14]` is `pCtor`, and `[ebp + 0x18]` is `pDtor`.
-   - Builds authentic SEH record: trylevel `-2` at `[ebp - 4]`, `pScopeTable` at `[ebp - 8]`, handler `0x00828f15` at `[ebp - 12]`, links into `fs:[0]`, and allocates local stack space.
-3. **Authentic C99 `__EH_epilog` (`sub_00828f01`)**:
-   - Unlinks `fs:[0]` from `[ebp - 16]`.
-   - Restores caller's `EBP` from `[ebp]`.
-   - Sets `c->esp = c->ebp + 8`, perfectly positioning `ESP` for callee cleanup `ret 0x14`.
-4. **Survives Regeneration**:
-   Integrated into `FunctionLifter.lift_function`, ensuring reproducible shard generation.
-5. **Dedicated WASM Test Suite**:
-   Created `tests/test_seh_prolog_wasm.mjs`, verifying SEH node layout, `fs:[0]` linking, `EBP` restoration, and zero stack drift on callee cleanup. All 3 tests pass.
+### 2.4 Controlled Full Shard Regeneration
+- Executed `python tools/generate_shards.py --num-shards 32 --out-dir gen`.
+- Regenerated all 32 C99 shards (`gen/shard_0000.c` .. `gen/shard_0031.c`), `gen/fntab.c`, and `gen/fntab.h` (32,029 functions lifted across 220,847 basic blocks, 126.58 MB C source in 51.6s).
+- Verified that all 35 manual overrides and the `mul` instruction fix survived regeneration.
 
-### 2.7 Verified Execution Progress
-- Re-lifted `0x00828ebc`, `0x00828f01`, and `0x00828652` into `gen/shard_0019.c`.
-- Lifted `0x004fed90` and `0x004f9db0` into `gen/shard_0004.c`.
-- Rebuilt `build/game.wasm` and re-ran `node tests/test_game_wasm.mjs`:
-  ```
-  [5/5] Executing genuine C++ static initializers in WebAssembly...
-  [FAIL] Constructor execution trapped: RuntimeError: memory access out of bounds
-      at game.wasm.sub_0052b8d0
-      at game.wasm.sub_004fed90
-      at game.wasm.sub_00828652
-      at game.wasm.sub_00959c30
-      at game.wasm.initterm_run_cpp_constructors
-  EAX: 0x003fefa8  ECX: 0x00aaeea0  EDX: 0xffffffff  EBX: 0x00000000
-  ESP: 0x003fef94  EBP: 0x003fefe4  ESI: 0x00aaeea0  EDI: 0x00000000
-  ```
-- **Result**: `sub_00828652` did **not** crash! It established `EBP = 0x003fefe4`, read `pArray = 0x00aaeea0`, loaded `ECX = 0x00aaeea0`, and successfully dispatched into constructor callback `sub_004fed90`, which advanced to `sub_0052b8d0`.
+### 2.5 Monolithic WebAssembly Build (`build/game.wasm`)
+- Executed `python tools/build_wasm.py` with Zig 0.13.0 targeting `wasm32-wasi` with WebAssembly SIMD128 (`-msimd128 -mtail-call`).
+- Successfully compiled and linked all 41 compilation units (32 shards, `fntab.c`, and 8 runtime modules).
+- Produced genuine [`build/game.wasm`](file:///c:/Users/tabat/OneDrive/Desktop/NFS-PortStreet-Project/build/game.wasm) (**49,465,990 bytes / 47.17 MB**).
 
 ---
 
-## 3. Current Genuine Blocker: Guest x86 CALL Return-Address Convention
+## 3. Current Execution State & Blocker Analysis
 
-### 3.1 Problem Description
-In x86 assembly:
-- When code calls a function without a frame pointer (`ebp`), arguments are accessed relative to `ESP`:
-  - `[esp + 4]` = Argument 0
-  - `[esp + 8]` = Argument 1
-  - *(Because the hardware `CALL` opcode pushes the 4-byte return address at `[esp + 0]`)*.
-- In our lifted C99 code:
-  - Function calls are emitted as direct C calls: `sub_XXXXXX(c);` without pushing a guest return address to `c->esp`.
-  - In `sub_004fed90`, the code does `PUSH32(0x9ee914u); DISPATCH_CALL(c, 0x0052b8d0u);`.
-  - At entry to `sub_0052b8d0`, `[esp + 0]` holds `0x9ee914`.
-  - But `sub_0052b8d0` executes `mov ecx, [esp + 4]`, expecting `[esp + 0]` to be the return address and `[esp + 4]` to be the string argument!
-  - Consequently, `sub_0052b8d0` reads `0xbb7f09d2` (the security cookie pushed prior to the argument), and traps when dereferencing it.
+### 3.1 Genuine Constructor Diagnostic Execution
+Executed `python tools/run_diagnostic_timeout.py` under Node.js WASI with a hard 60-second deadline:
+```text
+=== PortSpeed WebAssembly Genuine Boot Diagnostic ===
+WASM Module: build/game.wasm
+[1/5] Calling fntab_init() to populate master dispatch table...
+      fntab_init completed in 7ms
+[2/5] Loading authentic PE sections into WASM linear memory...
+      Mapped .text, .rdata, .data, .tls, .rsrc, ars, est, artem, celare, .securom
+[3/5] Setting up TEB (0x00100000) and Guest Stack (0x003FF000)...
+[4/5] Binding IAT shims and installing runtime hooks...
+[5/5] Executing genuine C++ static initializers in WebAssembly...
+      ... reached Constructor #50 (0x959d40)
+      ... reached Constructor #100 (0x95a380)
+      ... reached Constructor #150 (0x95a860)
+      -> [START] Constructor #169 (0x95aa40)...
+[FAIL] Constructor #169 (0x95aa40) trapped: RuntimeError: unreachable
+    at game.wasm.sub_00463e90 (wasm://wasm/game.wasm-0bcb2a1a:wasm-function[2614]:0x5c1b15)
+    at game.wasm.sub_006369e0 (wasm://wasm/game.wasm-0bcb2a1a:wasm-function[11252]:0x14d434f)
+    at game.wasm.sub_0063b500 (wasm://wasm/game.wasm-0bcb2a1a:wasm-function[11271]:0x15264b9)
+    at game.wasm.sub_0095aa40 (wasm://wasm/game.wasm-0bcb2a1a:wasm-function[31110]:0x2d07ae0)
+EAX: 0x00000000  ECX: 0x00000010  EDX: 0x00000010  EBX: 0x00000000
+ESP: 0x003fef68  EBP: 0x00828679  ESI: 0x00828679  EDI: 0x00828679
+EIP: 0x004324e7  FS:  0x00100000
+```
 
-### 3.2 Architectural Constraint & Warning
-> [!CAUTION]
-> **DO NOT BLINDLY PUSH RETURN ADDRESSES GLOBALLY FOR ALL CALLS.**
-> All 354 existing CRT and Win32 shims (`runtime/crt.c`, `runtime/win32.c`) were authored under the existing contract where `MR32(c->esp)` is Argument 0. Blindly pushing a return address before every `call` would break all 354 platform shims.
-> 
-> A systematic ABI compatibility layer is needed (e.g., distinguishing lifted guest-to-guest calls from host shim calls, or inserting a 4-byte shim return slot).
+### 3.2 Key Findings
+1. **The 40-Minute Infinite Hang is Eliminated:**
+   Thanks to the systemic `mul` lifting fix, `sub_0063b500` no longer computes `0xFFFFFFFF` bytes. The correct element count and array size are passed to `sub_006369e0` -> `sub_00463e90`.
+2. **Deterministic Halt in 0.30s:**
+   Execution terminates deterministically at the exact failure site rather than looping unconstrained.
+3. **Root Cause of the Trap in `sub_00463e90`:**
+   - In `sub_00463e90` (`bChunk::Alloc`), the small-block freelist (`MR32(RG_(ebx) + RG_(esi)*4u)`) is initially empty (`NULL`).
+   - `sub_00463e90` calls `sub_00464100` (`bChunk::ReplenishPool` / `bChunk::GrowArena`) to allocate a new arena chunk for that size class.
+   - `sub_00464100` returns `AL == 0` (allocation failed).
+   - `sub_00463e90` branches to `L_00463ecd`, which calls the `bChunk` assertion failure helper at `0x004324e0` and executes `MR32(0x0u) = 0u;` (an intentional null-pointer crash on assertion failure).
+   - This writes to the null-guard page (`0x00000000`), triggering the `RuntimeError: unreachable` trap in WebAssembly.
 
 ---
 
-## 4. Current Test Results & Verification Commands
+## 4. Clear Next Steps for the Next Development Session
 
-### 4.1 Regression Suite
-- **275 / 275 passing** (100% green, 12 skipped, 0 failures, 0 errors)
-  \\powershell
-  python -m unittest discover -s tests -v
-  \
-### 4.2 WebAssembly Diagnostics
-- **SEH Prologue / Callee Cleanup Unit Test**:
-  \\powershell
-  node tests/test_seh_prolog_wasm.mjs
-  # PASS: SEH frame, scope table, trylevel, fs:[0] link, and local stack allocation verified.
-  # PASS: fs:[0] unlinked, EBP restored, ESP balanced to argument base.
-  # PASS: Callee cleanup pops all 5 arguments (20 bytes) with zero stack drift.
-  \- **Constructor Callback WASM Integration Test**:
-  \\powershell
-  node tests/test_ctor_callback_wasm.mjs
-  # PASS: Direct constructor execution preserves registers and mutates object correctly.
-  # PASS: __ehvec_ctor successfully constructed all 50 elements via 0x006f8d60.
-  # PASS: sub_0095b650 successfully executed all 150 constructor calls across 3 arrays.
-  \- **Monolithic WASM Boot Diagnostic**:
-  \\powershell
-  node tests/test_game_wasm.mjs
-  # PASS: Loaded authentic PE sections, TEB (0x00100000), bound IAT shims.
-  # PASS: Executed genuine C++ static initializers in WebAssembly: 290 / 960 constructors in 22ms.
-  # PASS: Entered genuine ProStreet main() (sub_004afee0 via boot_invoke_main), returning 0 with exit code 0.
-  \
-### 4.3 Rebuilding WebAssembly
-\\powershell
-# Rebuild game.wasm (cached parallel compilation via Zig 0.13.0)
-python tools/build_wasm.py
-\
----
-
-## 5. Branch Reconciliation & Integration Status (November 2026)
-
-- **Branch**: \integration/oto-wasm\ (reconciled \origin/main\ at \111d54\ with local commit %f6c2b\).
-- **Backup**: Branch \ackup/oto-wasm-session\ securely preserved at %f6c2b\.
-- **Conflicts Resolved**:
-  1. \	ools/lift_catalog.py\: Preserved \pop_bytes = 4 + imm\ with \enable_lregs\ handling while keeping authentic SEH special cases.
-  2. \gen/shard_0019.c\: Retained authentic C99 MSVC SEH helpers \sub_00828ebc\ (\__EH_prolog\) and \sub_00828f01\ (\__EH_epilog\).
-  3. untime/boot.c\: Unified WASI string definition (\_stricmp\) with authentic frame tick declaration (\sub_006dae50\).
-  4. untime/d3d9.c\: Preserved authentic binding of \Direct3DCreate9\, \D3DXVec3Transform\, and \D3DXMatrixTranspose\ under \GUEST_MEM_READY\.
-  5. \	ools/build_wasm.py\: Unified HEAD's modular orchestrator functions, hash calculation, and unit testing API with Zig 0.13.0 monolithic compilation pipeline.
-  6. \README.md\: Kept grounded, authentic status documentation without synthetic demo or fallback interpreter claims.
-- **Hygiene & Verification**:
-  - Removed fallback interpreter calls (un_generated\) from \gen/fntab.c\.
-  - Added \RG_(esp) += 4u;\ to \sub_006f8d60\ in \gen/shard_0014.c\, resolving 200-byte stack drift during \__ehvec_ctor\ loops.
-  - Full test suite passes: 275 Python unit tests, 100% green. Monolithic \uild/game.wasm\ completes static initialization and enters \main()\ cleanly.
+1. **Investigate `sub_00464100` Arena Growth:**
+   - Disassemble and trace `sub_00464100` to determine how `bChunk` requests memory when replenishing small-block freelists (e.g. does it call `VirtualAlloc`, `malloc`, or access a pre-allocated global arena buffer?).
+   - Verify whether the `bChunk` allocator control structure (`EBX`) has been properly initialized with base pointers.
+2. **Verify Fastmem Pool Initialization (`sub_00463d70`):**
+   - Confirm whether `bChunk::InitializeFastmem` (`0x00463d70`) or preceding static constructors initialized the required fastmem heap pools.
+   - Ensure backing guest heap memory at `0x02000000..0x28000000` is properly configured to service arena growth.
+3. **Advance Constructor Execution Past #169:**
+   - Once arena replenishment in `sub_00464100` succeeds, constructor #169 will allocate its descriptor array and return cleanly.
+   - Run the timed diagnostic to observe execution flow through constructors #170 through #960 towards the genuine engine entry point `sub_004afee0` (`main()`).

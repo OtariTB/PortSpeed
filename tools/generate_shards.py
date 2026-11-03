@@ -45,6 +45,7 @@ def generate_fntab_header(functions: Sequence[dict[str, Any]]) -> str:
         "",
         "#include <stdint.h>",
         '#include "runtime/cpu.h"',
+        '#include "runtime/memory.h"',
         "",
         "#ifdef __cplusplus",
         'extern "C" {',
@@ -77,6 +78,7 @@ def generate_fntab_header(functions: Sequence[dict[str, Any]]) -> str:
 def generate_fntab_source(
     functions: Sequence[dict[str, Any]],
     chunk_size: int = 2500,
+    trampoline_data: dict[str, Any] | None = None,
 ) -> str:
     """Generates the C implementation file gen/fntab.c with g_dtab and dispatch_indirect."""
     text_funcs = [f for f in functions if DISPATCH_TEXT_BASE <= f["address"] < DISPATCH_TEXT_END]
@@ -107,7 +109,26 @@ def generate_fntab_source(
             lines.append(f"    g_dtab[0x{offset:08x}u] = sub_{f['address']:08x};")
         lines.append("}\n")
 
+    # Trampoline entries in g_dtab
+    t_entries = []
+    if trampoline_data:
+        fn_addrs = {f["address"] for f in functions}
+        for t in trampoline_data.get("trampolines", []):
+            s_va = t.get("site_va", 0)
+            t_va = t.get("target_va", 0)
+            if DISPATCH_TEXT_BASE <= s_va < DISPATCH_TEXT_END and t_va in fn_addrs:
+                t_entries.append((s_va - DISPATCH_TEXT_BASE, t_va))
+        t_entries.sort(key=lambda x: x[0])
+
+    if t_entries:
+        lines.append("static void fntab_init_trampolines(void) {")
+        for off, target in t_entries:
+            lines.append(f"    g_dtab[0x{off:08x}u] = sub_{target:08x};")
+        lines.append("}\n")
+
     lines.append("void fntab_init(void) {")
+    if t_entries:
+        lines.append("    fntab_init_trampolines();")
     for cname in chunk_names:
         lines.append(f"    {cname}();")
     lines.append("}\n")
@@ -130,7 +151,8 @@ def generate_fntab_source(
         "    default:",
         "        c->eip = addr;",
         "#ifndef __wasm__",
-        '        fprintf(stderr, "[DISPATCH] Unresolved indirect target: 0x%08x\\n", addr);',
+        '        fprintf(stderr, "[DISPATCH] Unresolved indirect target: 0x%08x (esp=0x%08x [esp]=0x%08x)\\n", addr, c->esp, MR32(c->esp));',
+        "        fflush(stderr);",
         "#endif",
         "        return;",
         "    }",
@@ -162,7 +184,13 @@ def generate_shards(
     """
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    sorted_funcs = sorted(catalog["functions"], key=lambda f: f["address"])
+    from tools.manual_overrides import ADDITIONAL_FUNCTIONS
+    known_addrs = {f["address"] for f in catalog["functions"]}
+    all_funcs = list(catalog["functions"])
+    for va in ADDITIONAL_FUNCTIONS:
+        if va not in known_addrs:
+            all_funcs.append({"address": va, "blocks": []})
+    sorted_funcs = sorted(all_funcs, key=lambda f: f["address"])
     if max_functions is not None:
         sorted_funcs = sorted_funcs[:max_functions]
 
@@ -184,8 +212,12 @@ def generate_shards(
     fntab_h_path.write_text(fntab_h_content, encoding="utf-8")
 
     # 2. Generate gen/fntab.c
+    t_path = WORKSPACE / "research" / "local" / "phase1" / "securom_trampolines.json"
+    trampoline_data = None
+    if t_path.is_file():
+        trampoline_data = json.loads(t_path.read_text(encoding="utf-8"))
     fntab_c_path = out_dir / "fntab.c"
-    fntab_c_content = generate_fntab_source(sorted_funcs)
+    fntab_c_content = generate_fntab_source(sorted_funcs, trampoline_data=trampoline_data)
     fntab_c_path.write_text(fntab_c_content, encoding="utf-8")
 
     # 3. Generate individual shards

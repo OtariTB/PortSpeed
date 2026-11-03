@@ -1206,6 +1206,7 @@ static void fntab_init_chunk_0(void) {
     g_dtab[0x00037750u] = sub_00438750;
     g_dtab[0x00037770u] = sub_00438770;
     g_dtab[0x000377e6u] = sub_004387e6;
+    g_dtab[0x00037800u] = sub_00438800;
     g_dtab[0x00037820u] = sub_00438820;
     g_dtab[0x00037830u] = sub_00438830;
     g_dtab[0x00037840u] = sub_00438840;
@@ -1389,6 +1390,7 @@ static void fntab_init_chunk_0(void) {
     g_dtab[0x00045960u] = sub_00446960;
     g_dtab[0x00045cd0u] = sub_00446cd0;
     g_dtab[0x00046240u] = sub_00447240;
+    g_dtab[0x00046b10u] = sub_00447b10;
     g_dtab[0x000486c0u] = sub_004496c0;
     g_dtab[0x00049448u] = sub_0044a448;
     g_dtab[0x000498b0u] = sub_0044a8b0;
@@ -1787,6 +1789,7 @@ static void fntab_init_chunk_0(void) {
     g_dtab[0x00062920u] = sub_00463920;
     g_dtab[0x00062ae0u] = sub_00463ae0;
     g_dtab[0x00062d10u] = sub_00463d10;
+    g_dtab[0x00062d70u] = sub_00463d70;
     g_dtab[0x00062dcfu] = sub_00463dcf;
     g_dtab[0x00062de0u] = sub_00463de0;
     g_dtab[0x00062e90u] = sub_00463e90;
@@ -2506,12 +2509,12 @@ static void fntab_init_chunk_0(void) {
     g_dtab[0x00085170u] = sub_00486170;
     g_dtab[0x00085180u] = sub_00486180;
     g_dtab[0x00085190u] = sub_00486190;
-    g_dtab[0x00085220u] = sub_00486220;
-    g_dtab[0x000852b0u] = sub_004862b0;
-    g_dtab[0x000852c0u] = sub_004862c0;
 }
 
 static void fntab_init_chunk_1(void) {
+    g_dtab[0x00085220u] = sub_00486220;
+    g_dtab[0x000852b0u] = sub_004862b0;
+    g_dtab[0x000852c0u] = sub_004862c0;
     g_dtab[0x000852d0u] = sub_004862d0;
     g_dtab[0x000852e0u] = sub_004862e0;
     g_dtab[0x000852f0u] = sub_004862f0;
@@ -5009,6 +5012,9 @@ static void fntab_init_chunk_1(void) {
     g_dtab[0x0011c080u] = sub_0051d080;
     g_dtab[0x0011ce10u] = sub_0051de10;
     g_dtab[0x0011d070u] = sub_0051e070;
+}
+
+static void fntab_init_chunk_2(void) {
     g_dtab[0x0011e0d0u] = sub_0051f0d0;
     g_dtab[0x0011e0e0u] = sub_0051f0e0;
     g_dtab[0x0011e110u] = sub_0051f110;
@@ -5016,9 +5022,6 @@ static void fntab_init_chunk_1(void) {
     g_dtab[0x0011e240u] = sub_0051f240;
     g_dtab[0x0011e2c0u] = sub_0051f2c0;
     g_dtab[0x0011e370u] = sub_0051f370;
-}
-
-static void fntab_init_chunk_2(void) {
     g_dtab[0x0011e3b0u] = sub_0051f3b0;
     g_dtab[0x0011e4b0u] = sub_0051f4b0;
     g_dtab[0x0011e5e0u] = sub_0051f5e0;
@@ -5394,6 +5397,8 @@ static void fntab_init_chunk_2(void) {
     g_dtab[0x00130586u] = sub_00531586;
     g_dtab[0x001305a0u] = sub_005315a0;
     g_dtab[0x001305e0u] = sub_005315e0;
+    g_dtab[0x00130600u] = sub_00531600;
+    g_dtab[0x00130630u] = sub_00531630;
     g_dtab[0x00130680u] = sub_00531680;
     g_dtab[0x00130690u] = sub_00531690;
     g_dtab[0x001306b0u] = sub_005316b0;
@@ -5451,6 +5456,8 @@ static void fntab_init_chunk_2(void) {
     g_dtab[0x00131000u] = sub_00532000;
     g_dtab[0x00131010u] = sub_00532010;
     g_dtab[0x00131020u] = sub_00532020;
+    g_dtab[0x00131030u] = sub_00532030;
+    g_dtab[0x00131060u] = sub_00532060;
     g_dtab[0x001310a0u] = sub_005320a0;
     g_dtab[0x001310b0u] = sub_005320b0;
     g_dtab[0x00131130u] = sub_00532130;
@@ -5633,6 +5640,7 @@ static void fntab_init_chunk_2(void) {
     g_dtab[0x00134da0u] = sub_00535da0;
     g_dtab[0x00134db0u] = sub_00535db0;
     g_dtab[0x00134dc0u] = sub_00535dc0;
+    g_dtab[0x00134dd0u] = sub_00535dd0;
     g_dtab[0x00134e70u] = sub_00535e70;
     g_dtab[0x00134ef0u] = sub_00535ef0;
     g_dtab[0x00134f40u] = sub_00535f40;
@@ -7507,6 +7515,9 @@ static void fntab_init_chunk_2(void) {
     g_dtab[0x001977f0u] = sub_005987f0;
     g_dtab[0x00197810u] = sub_00598810;
     g_dtab[0x00197940u] = sub_00598940;
+}
+
+static void fntab_init_chunk_3(void) {
     g_dtab[0x00197b00u] = sub_00598b00;
     g_dtab[0x00197b50u] = sub_00598b50;
     g_dtab[0x00197b80u] = sub_00598b80;
@@ -7519,9 +7530,6 @@ static void fntab_init_chunk_2(void) {
     g_dtab[0x00197d90u] = sub_00598d90;
     g_dtab[0x00197da0u] = sub_00598da0;
     g_dtab[0x00197df0u] = sub_00598df0;
-}
-
-static void fntab_init_chunk_3(void) {
     g_dtab[0x00197e60u] = sub_00598e60;
     g_dtab[0x00197f00u] = sub_00598f00;
     g_dtab[0x00197f80u] = sub_00598f80;
@@ -10010,6 +10018,9 @@ static void fntab_init_chunk_3(void) {
     g_dtab[0x0021f100u] = sub_00620100;
     g_dtab[0x0021f190u] = sub_00620190;
     g_dtab[0x0021f1a0u] = sub_006201a0;
+}
+
+static void fntab_init_chunk_4(void) {
     g_dtab[0x0021f390u] = sub_00620390;
     g_dtab[0x0021f3a0u] = sub_006203a0;
     g_dtab[0x0021f450u] = sub_00620450;
@@ -10022,9 +10033,6 @@ static void fntab_init_chunk_3(void) {
     g_dtab[0x0021f840u] = sub_00620840;
     g_dtab[0x0021f850u] = sub_00620850;
     g_dtab[0x0021f890u] = sub_00620890;
-}
-
-static void fntab_init_chunk_4(void) {
     g_dtab[0x0021f8b0u] = sub_006208b0;
     g_dtab[0x0021fa10u] = sub_00620a10;
     g_dtab[0x0021fa20u] = sub_00620a20;
@@ -10110,10 +10118,13 @@ static void fntab_init_chunk_4(void) {
     g_dtab[0x00222720u] = sub_00623720;
     g_dtab[0x00222770u] = sub_00623770;
     g_dtab[0x002227d0u] = sub_006237d0;
+    g_dtab[0x002227f0u] = sub_006237f0;
+    g_dtab[0x00222810u] = sub_00623810;
     g_dtab[0x002228a0u] = sub_006238a0;
     g_dtab[0x00222a50u] = sub_00623a50;
     g_dtab[0x00222c30u] = sub_00623c30;
     g_dtab[0x00222c80u] = sub_00623c80;
+    g_dtab[0x00222ce0u] = sub_00623ce0;
     g_dtab[0x00222da0u] = sub_00623da0;
     g_dtab[0x00222e20u] = sub_00623e20;
     g_dtab[0x00222e60u] = sub_00623e60;
@@ -10192,6 +10203,7 @@ static void fntab_init_chunk_4(void) {
     g_dtab[0x00226250u] = sub_00627250;
     g_dtab[0x00226310u] = sub_00627310;
     g_dtab[0x002263a0u] = sub_006273a0;
+    g_dtab[0x00226400u] = sub_00627400;
     g_dtab[0x00226410u] = sub_00627410;
     g_dtab[0x00226548u] = sub_00627548;
     g_dtab[0x0022656cu] = sub_0062756c;
@@ -11366,6 +11378,8 @@ static void fntab_init_chunk_4(void) {
     g_dtab[0x00257850u] = sub_00658850;
     g_dtab[0x00257960u] = sub_00658960;
     g_dtab[0x002579f0u] = sub_006589f0;
+    g_dtab[0x00257a20u] = sub_00658a20;
+    g_dtab[0x00257a80u] = sub_00658a80;
     g_dtab[0x00257c20u] = sub_00658c20;
     g_dtab[0x00257fa0u] = sub_00658fa0;
     g_dtab[0x00257fc0u] = sub_00658fc0;
@@ -12507,6 +12521,9 @@ static void fntab_init_chunk_4(void) {
     g_dtab[0x00299f00u] = sub_0069af00;
     g_dtab[0x00299f30u] = sub_0069af30;
     g_dtab[0x00299fe0u] = sub_0069afe0;
+}
+
+static void fntab_init_chunk_5(void) {
     g_dtab[0x00299ff0u] = sub_0069aff0;
     g_dtab[0x0029a0c0u] = sub_0069b0c0;
     g_dtab[0x0029a0d0u] = sub_0069b0d0;
@@ -12526,9 +12543,6 @@ static void fntab_init_chunk_4(void) {
     g_dtab[0x0029a290u] = sub_0069b290;
     g_dtab[0x0029a2a0u] = sub_0069b2a0;
     g_dtab[0x0029a2b0u] = sub_0069b2b0;
-}
-
-static void fntab_init_chunk_5(void) {
     g_dtab[0x0029a2e0u] = sub_0069b2e0;
     g_dtab[0x0029a2f0u] = sub_0069b2f0;
     g_dtab[0x0029a330u] = sub_0069b330;
@@ -15010,6 +15024,9 @@ static void fntab_init_chunk_5(void) {
     g_dtab[0x00321700u] = sub_00722700;
     g_dtab[0x003219d0u] = sub_007229d0;
     g_dtab[0x00321b00u] = sub_00722b00;
+}
+
+static void fntab_init_chunk_6(void) {
     g_dtab[0x00321bb0u] = sub_00722bb0;
     g_dtab[0x00321c60u] = sub_00722c60;
     g_dtab[0x00321cd0u] = sub_00722cd0;
@@ -15031,9 +15048,6 @@ static void fntab_init_chunk_5(void) {
     g_dtab[0x00322d20u] = sub_00723d20;
     g_dtab[0x00323020u] = sub_00724020;
     g_dtab[0x00323220u] = sub_00724220;
-}
-
-static void fntab_init_chunk_6(void) {
     g_dtab[0x00323240u] = sub_00724240;
     g_dtab[0x003232d0u] = sub_007242d0;
     g_dtab[0x00323350u] = sub_00724350;
@@ -17001,6 +17015,7 @@ static void fntab_init_chunk_6(void) {
     g_dtab[0x003b05f0u] = sub_007b15f0;
     g_dtab[0x003b0610u] = sub_007b1610;
     g_dtab[0x003b0630u] = sub_007b1630;
+    g_dtab[0x003b0680u] = sub_007b1680;
     g_dtab[0x003b06d0u] = sub_007b16d0;
     g_dtab[0x003b0730u] = sub_007b1730;
     g_dtab[0x003b0750u] = sub_007b1750;
@@ -17512,6 +17527,9 @@ static void fntab_init_chunk_6(void) {
     g_dtab[0x003c3900u] = sub_007c4900;
     g_dtab[0x003c3960u] = sub_007c4960;
     g_dtab[0x003c3b20u] = sub_007c4b20;
+}
+
+static void fntab_init_chunk_7(void) {
     g_dtab[0x003c3ba0u] = sub_007c4ba0;
     g_dtab[0x003c3f60u] = sub_007c4f60;
     g_dtab[0x003c4000u] = sub_007c5000;
@@ -17536,9 +17554,6 @@ static void fntab_init_chunk_6(void) {
     g_dtab[0x003c4d10u] = sub_007c5d10;
     g_dtab[0x003c5630u] = sub_007c6630;
     g_dtab[0x003c57e0u] = sub_007c67e0;
-}
-
-static void fntab_init_chunk_7(void) {
     g_dtab[0x003c5890u] = sub_007c6890;
     g_dtab[0x003c58f0u] = sub_007c68f0;
     g_dtab[0x003c59e0u] = sub_007c69e0;
@@ -19384,6 +19399,7 @@ static void fntab_init_chunk_7(void) {
     g_dtab[0x0041addfu] = sub_0081bddf;
     g_dtab[0x0041af49u] = sub_0081bf49;
     g_dtab[0x0041b020u] = sub_0081c020;
+    g_dtab[0x0041b0b0u] = sub_0081c0b0;
     g_dtab[0x0041b150u] = sub_0081c150;
     g_dtab[0x0041b1b0u] = sub_0081c1b0;
     g_dtab[0x0041b1c0u] = sub_0081c1c0;
@@ -20014,6 +20030,9 @@ static void fntab_init_chunk_7(void) {
     g_dtab[0x0042ea10u] = sub_0082fa10;
     g_dtab[0x0042ea20u] = sub_0082fa20;
     g_dtab[0x0042ea50u] = sub_0082fa50;
+}
+
+static void fntab_init_chunk_8(void) {
     g_dtab[0x0042eaa0u] = sub_0082faa0;
     g_dtab[0x0042eb00u] = sub_0082fb00;
     g_dtab[0x0042eb60u] = sub_0082fb60;
@@ -20039,9 +20058,6 @@ static void fntab_init_chunk_7(void) {
     g_dtab[0x0042efa0u] = sub_0082ffa0;
     g_dtab[0x0042efb0u] = sub_0082ffb0;
     g_dtab[0x0042efd0u] = sub_0082ffd0;
-}
-
-static void fntab_init_chunk_8(void) {
     g_dtab[0x0042efe0u] = sub_0082ffe0;
     g_dtab[0x0042eff0u] = sub_0082fff0;
     g_dtab[0x0042efffu] = sub_0082ffff;
@@ -21259,6 +21275,7 @@ static void fntab_init_chunk_8(void) {
     g_dtab[0x00460410u] = sub_00861410;
     g_dtab[0x00460420u] = sub_00861420;
     g_dtab[0x00460430u] = sub_00861430;
+    g_dtab[0x00460450u] = sub_00861450;
     g_dtab[0x00460520u] = sub_00861520;
     g_dtab[0x00460530u] = sub_00861530;
     g_dtab[0x00460540u] = sub_00861540;
@@ -22516,6 +22533,9 @@ static void fntab_init_chunk_8(void) {
     g_dtab[0x0049670au] = sub_0089770a;
     g_dtab[0x004967a9u] = sub_008977a9;
     g_dtab[0x004967e1u] = sub_008977e1;
+}
+
+static void fntab_init_chunk_9(void) {
     g_dtab[0x00496888u] = sub_00897888;
     g_dtab[0x00496960u] = sub_00897960;
     g_dtab[0x00497bbcu] = sub_00898bbc;
@@ -22542,9 +22562,6 @@ static void fntab_init_chunk_8(void) {
     g_dtab[0x004989c6u] = sub_008999c6;
     g_dtab[0x00498d18u] = sub_00899d18;
     g_dtab[0x00498f17u] = sub_00899f17;
-}
-
-static void fntab_init_chunk_9(void) {
     g_dtab[0x00498f1du] = sub_00899f1d;
     g_dtab[0x00498f20u] = sub_00899f20;
     g_dtab[0x00498f25u] = sub_00899f25;
@@ -22630,6 +22647,8 @@ static void fntab_init_chunk_9(void) {
     g_dtab[0x0049c162u] = sub_0089d162;
     g_dtab[0x0049c19cu] = sub_0089d19c;
     g_dtab[0x0049c1a3u] = sub_0089d1a3;
+    g_dtab[0x0049c1c8u] = sub_0089d1c8;
+    g_dtab[0x0049c21bu] = sub_0089d21b;
     g_dtab[0x0049c231u] = sub_0089d231;
     g_dtab[0x0049c255u] = sub_0089d255;
     g_dtab[0x0049c25au] = sub_0089d25a;
@@ -22637,6 +22656,7 @@ static void fntab_init_chunk_9(void) {
     g_dtab[0x0049c5b5u] = sub_0089d5b5;
     g_dtab[0x0049c5ddu] = sub_0089d5dd;
     g_dtab[0x0049c632u] = sub_0089d632;
+    g_dtab[0x0049c67au] = sub_0089d67a;
     g_dtab[0x0049c68bu] = sub_0089d68b;
     g_dtab[0x0049c71fu] = sub_0089d71f;
     g_dtab[0x0049c73cu] = sub_0089d73c;
@@ -22654,6 +22674,7 @@ static void fntab_init_chunk_9(void) {
     g_dtab[0x0049ca41u] = sub_0089da41;
     g_dtab[0x0049ca48u] = sub_0089da48;
     g_dtab[0x0049ca6bu] = sub_0089da6b;
+    g_dtab[0x0049ca70u] = sub_0089da70;
     g_dtab[0x0049ca95u] = sub_0089da95;
     g_dtab[0x0049cabbu] = sub_0089dabb;
     g_dtab[0x0049cac0u] = sub_0089dac0;
@@ -22666,6 +22687,7 @@ static void fntab_init_chunk_9(void) {
     g_dtab[0x0049caf6u] = sub_0089daf6;
     g_dtab[0x0049cb1eu] = sub_0089db1e;
     g_dtab[0x0049cb8au] = sub_0089db8a;
+    g_dtab[0x0049cbb0u] = sub_0089dbb0;
     g_dtab[0x0049cbb9u] = sub_0089dbb9;
     g_dtab[0x0049cbc0u] = sub_0089dbc0;
     g_dtab[0x0049cbc1u] = sub_0089dbc1;
@@ -24191,6 +24213,7 @@ static void fntab_init_chunk_9(void) {
     g_dtab[0x0050b980u] = sub_0090c980;
     g_dtab[0x0050b9d0u] = sub_0090c9d0;
     g_dtab[0x0050ba10u] = sub_0090ca10;
+    g_dtab[0x0050bad0u] = sub_0090cad0;
     g_dtab[0x0050bae0u] = sub_0090cae0;
     g_dtab[0x0050bb00u] = sub_0090cb00;
     g_dtab[0x0050bb20u] = sub_0090cb20;
@@ -24226,6 +24249,7 @@ static void fntab_init_chunk_9(void) {
     g_dtab[0x0050c350u] = sub_0090d350;
     g_dtab[0x0050c580u] = sub_0090d580;
     g_dtab[0x0050c640u] = sub_0090d640;
+    g_dtab[0x0050c650u] = sub_0090d650;
     g_dtab[0x0050c6d0u] = sub_0090d6d0;
     g_dtab[0x0050c7a0u] = sub_0090d7a0;
     g_dtab[0x0050c910u] = sub_0090d910;
@@ -25012,6 +25036,9 @@ static void fntab_init_chunk_9(void) {
     g_dtab[0x005325ebu] = sub_009335eb;
     g_dtab[0x005325f6u] = sub_009335f6;
     g_dtab[0x00532601u] = sub_00933601;
+}
+
+static void fntab_init_chunk_10(void) {
     g_dtab[0x0053260cu] = sub_0093360c;
     g_dtab[0x00532640u] = sub_00933640;
     g_dtab[0x00532670u] = sub_00933670;
@@ -25046,9 +25073,6 @@ static void fntab_init_chunk_9(void) {
     g_dtab[0x00532a30u] = sub_00933a30;
     g_dtab[0x00532a60u] = sub_00933a60;
     g_dtab[0x00532a6bu] = sub_00933a6b;
-}
-
-static void fntab_init_chunk_10(void) {
     g_dtab[0x00532a90u] = sub_00933a90;
     g_dtab[0x00532a98u] = sub_00933a98;
     g_dtab[0x00532aa3u] = sub_00933aa3;
@@ -27515,6 +27539,9 @@ static void fntab_init_chunk_10(void) {
     g_dtab[0x00545e59u] = sub_00946e59;
     g_dtab[0x00545e80u] = sub_00946e80;
     g_dtab[0x00545e99u] = sub_00946e99;
+}
+
+static void fntab_init_chunk_11(void) {
     g_dtab[0x00545ea1u] = sub_00946ea1;
     g_dtab[0x00545ea9u] = sub_00946ea9;
     g_dtab[0x00545eb1u] = sub_00946eb1;
@@ -27549,9 +27576,6 @@ static void fntab_init_chunk_10(void) {
     g_dtab[0x005460d0u] = sub_009470d0;
     g_dtab[0x00546100u] = sub_00947100;
     g_dtab[0x00546130u] = sub_00947130;
-}
-
-static void fntab_init_chunk_11(void) {
     g_dtab[0x00546149u] = sub_00947149;
     g_dtab[0x00546151u] = sub_00947151;
     g_dtab[0x00546180u] = sub_00947180;
@@ -30018,6 +30042,9 @@ static void fntab_init_chunk_11(void) {
     g_dtab[0x005579c0u] = sub_009589c0;
     g_dtab[0x005579f0u] = sub_009589f0;
     g_dtab[0x00557a20u] = sub_00958a20;
+}
+
+static void fntab_init_chunk_12(void) {
     g_dtab[0x00557a50u] = sub_00958a50;
     g_dtab[0x00557a80u] = sub_00958a80;
     g_dtab[0x00557ab0u] = sub_00958ab0;
@@ -30052,9 +30079,6 @@ static void fntab_init_chunk_11(void) {
     g_dtab[0x00557fc0u] = sub_00958fc0;
     g_dtab[0x00557ff0u] = sub_00958ff0;
     g_dtab[0x00558010u] = sub_00959010;
-}
-
-static void fntab_init_chunk_12(void) {
     g_dtab[0x00558030u] = sub_00959030;
     g_dtab[0x00558050u] = sub_00959050;
     g_dtab[0x00558060u] = sub_00959060;
@@ -31011,7 +31035,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00032c90u] = sub_01a1b030;
     g_dtab[0x00032d50u] = sub_004e13d0;
     g_dtab[0x00032da0u] = sub_01a0c210;
-    g_dtab[0x00032df0u] = sub_01a07e30;
+    g_dtab[0x00032df0u] = sub_00433af0;
     g_dtab[0x00034140u] = sub_01a19100;
     g_dtab[0x00034850u] = sub_019f4f20;
     g_dtab[0x00034980u] = sub_01a02380;
@@ -31025,7 +31049,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0003536cu] = sub_004580f6;
     g_dtab[0x000353e0u] = sub_004b6600;
     g_dtab[0x00035410u] = sub_004fe820;
-    g_dtab[0x00035430u] = sub_01a02380;
+    g_dtab[0x00035430u] = sub_00435980;
     g_dtab[0x00035610u] = sub_00435eb0;
     g_dtab[0x00035840u] = sub_01a111a0;
     g_dtab[0x00035910u] = sub_0047b8e0;
@@ -31096,7 +31120,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0004a3f0u] = sub_004f5220;
     g_dtab[0x0004a490u] = sub_004aeb70;
     g_dtab[0x0004a610u] = sub_01a0f880;
-    g_dtab[0x0004a730u] = sub_01a00e20;
+    g_dtab[0x0004a730u] = sub_0044c410;
     g_dtab[0x0004a770u] = sub_004adda0;
     g_dtab[0x0004aa10u] = sub_01a08a10;
     g_dtab[0x0004aa50u] = sub_01a08980;
@@ -31140,7 +31164,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00052e80u] = sub_01a01fe0;
     g_dtab[0x00052ed0u] = sub_01a11fb0;
     g_dtab[0x00052f20u] = sub_019f32c0;
-    g_dtab[0x000533a0u] = sub_01a11fb0;
+    g_dtab[0x000533a0u] = sub_00453ed0;
     g_dtab[0x000533e0u] = sub_01a00950;
     g_dtab[0x00053931u] = sub_004dc59e;
     g_dtab[0x00053a00u] = sub_005585d0;
@@ -31192,14 +31216,14 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00057c20u] = sub_01a00510;
     g_dtab[0x00057e81u] = sub_00538356;
     g_dtab[0x00058270u] = sub_01a0f570;
-    g_dtab[0x000582e0u] = sub_01a00850;
+    g_dtab[0x000582e0u] = sub_004593c0;
     g_dtab[0x00058330u] = sub_0052f290;
     g_dtab[0x000583c0u] = sub_01a00850;
     g_dtab[0x00058450u] = sub_01a112f0;
     g_dtab[0x00058540u] = sub_004caef0;
     g_dtab[0x00058660u] = sub_0051c250;
     g_dtab[0x00058720u] = sub_0055fd00;
-    g_dtab[0x00058aa0u] = sub_00545f90;
+    g_dtab[0x00058aa0u] = sub_00453df0;
     g_dtab[0x00058ac0u] = sub_0044ba20;
     g_dtab[0x00058af0u] = sub_004c5e00;
     g_dtab[0x00058b80u] = sub_004ac890;
@@ -31536,7 +31560,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000c12b0u] = sub_005611b0;
     g_dtab[0x000c1cf0u] = sub_01a17310;
     g_dtab[0x000c3140u] = sub_01a03e40;
-    g_dtab[0x000c48b0u] = sub_00464c80;
+    g_dtab[0x000c48b0u] = sub_004a0050;
     g_dtab[0x000c4df0u] = sub_004d4130;
     g_dtab[0x000c6d77u] = sub_0049e255;
     g_dtab[0x000c6dc0u] = sub_004c9010;
@@ -31544,7 +31568,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000c6f60u] = sub_01a09500;
     g_dtab[0x000c7280u] = sub_00542700;
     g_dtab[0x000c7510u] = sub_01a192e0;
-    g_dtab[0x000c7930u] = sub_01a15c00;
+    g_dtab[0x000c7930u] = sub_004aebb0;
     g_dtab[0x000c7a30u] = sub_01a043a0;
     g_dtab[0x000c7b90u] = sub_01a16420;
     g_dtab[0x000c7e50u] = sub_005304d0;
@@ -31570,7 +31594,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000ca0f0u] = sub_019f5e80;
     g_dtab[0x000ca2b0u] = sub_0051bf90;
     g_dtab[0x000ca530u] = sub_01a191d0;
-    g_dtab[0x000ca5c0u] = sub_01a17fa0;
+    g_dtab[0x000ca5c0u] = sub_004cbdc0;
     g_dtab[0x000ca600u] = sub_004a3350;
     g_dtab[0x000ca650u] = sub_01a09420;
     g_dtab[0x000ca710u] = sub_01a0b140;
@@ -31603,7 +31627,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000ce3d0u] = sub_0052ce00;
     g_dtab[0x000ce650u] = sub_004c8290;
     g_dtab[0x000ce670u] = sub_01a0e8d0;
-    g_dtab[0x000ce6e0u] = sub_00568810;
+    g_dtab[0x000ce6e0u] = sub_004cd270;
     g_dtab[0x000ce800u] = sub_004b2560;
     g_dtab[0x000ce850u] = sub_01a00d70;
     g_dtab[0x000ceb30u] = sub_00461420;
@@ -31649,7 +31673,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000db720u] = sub_01bea000;
     g_dtab[0x000db830u] = sub_00505f40;
     g_dtab[0x000db850u] = sub_004614b0;
-    g_dtab[0x000db870u] = sub_01a19050;
+    g_dtab[0x000db870u] = sub_004dd1a0;
     g_dtab[0x000db940u] = sub_004d44b0;
     g_dtab[0x000db960u] = sub_01a11d90;
     g_dtab[0x000db9d0u] = sub_008287c8;
@@ -31660,12 +31684,12 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000dbb60u] = sub_004dc180;
     g_dtab[0x000dbbc0u] = sub_019fa540;
     g_dtab[0x000dbe70u] = sub_01bd4000;
-    g_dtab[0x000dbf70u] = sub_01a0d570;
+    g_dtab[0x000dbf70u] = sub_004dd540;
     g_dtab[0x000dbfd0u] = sub_01a0ee00;
     g_dtab[0x000dc140u] = sub_01a07d00;
     g_dtab[0x000dc1a0u] = sub_01a19050;
     g_dtab[0x000dc383u] = sub_0049ba6e;
-    g_dtab[0x000dc3e0u] = sub_01a0d570;
+    g_dtab[0x000dc3e0u] = sub_004dd540;
     g_dtab[0x000dc430u] = sub_019fc0e0;
     g_dtab[0x000dc540u] = sub_01a0d570;
     g_dtab[0x000dc5a0u] = sub_0045e3c0;
@@ -31686,7 +31710,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000ddc50u] = sub_01a0af40;
     g_dtab[0x000ddca0u] = sub_00682590;
     g_dtab[0x000ddd10u] = sub_00423fc0;
-    g_dtab[0x000ddd50u] = sub_00428550;
+    g_dtab[0x000ddd50u] = sub_004337a0;
     g_dtab[0x000dddb0u] = sub_004c22c0;
     g_dtab[0x000dddf0u] = sub_004fca30;
     g_dtab[0x000de160u] = sub_01a18fd0;
@@ -31724,7 +31748,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000e3d40u] = sub_01bcf019;
     g_dtab[0x000e3d90u] = sub_008287c8;
     g_dtab[0x000e3e00u] = sub_01a0e2e0;
-    g_dtab[0x000e4e30u] = sub_004d1e20;
+    g_dtab[0x000e4e30u] = sub_004e37e0;
     g_dtab[0x000e51f0u] = sub_01a19c10;
     g_dtab[0x000e5440u] = sub_004387e6;
     g_dtab[0x000e55b0u] = sub_01e47025;
@@ -31745,8 +31769,8 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000ea790u] = sub_004e9b90;
     g_dtab[0x000eb640u] = sub_005225b0;
     g_dtab[0x000eb6a0u] = sub_01a0f630;
-    g_dtab[0x000eb740u] = sub_00561970;
-    g_dtab[0x000eb770u] = sub_00561970;
+    g_dtab[0x000eb740u] = sub_004e39b0;
+    g_dtab[0x000eb770u] = sub_004e39b0;
     g_dtab[0x000ebb80u] = sub_004f9960;
     g_dtab[0x000ebbd0u] = sub_01a1abd0;
     g_dtab[0x000ebc40u] = sub_0052b950;
@@ -31775,7 +31799,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000ed530u] = sub_0052b950;
     g_dtab[0x000ed550u] = sub_019febc0;
     g_dtab[0x000ed5c0u] = sub_01a0e9f0;
-    g_dtab[0x000ed750u] = sub_01a1abd0;
+    g_dtab[0x000ed750u] = sub_004ecbd0;
     g_dtab[0x000ee550u] = sub_01e4a000;
     g_dtab[0x000ef5b0u] = sub_005201f3;
     g_dtab[0x000ef6f0u] = sub_004cf680;
@@ -31805,7 +31829,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000f62d0u] = sub_004a15c0;
     g_dtab[0x000f62f0u] = sub_01a0ae80;
     g_dtab[0x000f72a0u] = sub_01a1b4f0;
-    g_dtab[0x000f74b0u] = sub_019fb2c0;
+    g_dtab[0x000f74b0u] = sub_004d5ce0;
     g_dtab[0x000f7610u] = sub_0054a740;
     g_dtab[0x000f87f0u] = sub_00505fb0;
     g_dtab[0x000f8950u] = sub_004637e0;
@@ -31825,7 +31849,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000fbbc0u] = sub_004fc580;
     g_dtab[0x000fbc30u] = sub_0049d9a0;
     g_dtab[0x000fbc50u] = sub_004fcc90;
-    g_dtab[0x000fbc80u] = sub_004fc580;
+    g_dtab[0x000fbc80u] = sub_004fcbc0;
     g_dtab[0x000fc1c0u] = sub_01a1a390;
     g_dtab[0x000fc3a0u] = sub_019fc3a0;
     g_dtab[0x000fcb40u] = sub_01a1b3b0;
@@ -31848,11 +31872,11 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x000ff180u] = sub_01e17061;
     g_dtab[0x000ff270u] = sub_004a2090;
     g_dtab[0x000ff740u] = sub_01a0e960;
-    g_dtab[0x000ffa20u] = sub_019f7bb0;
+    g_dtab[0x000ffa20u] = sub_004ed0a0;
     g_dtab[0x000ffd00u] = sub_019fad90;
     g_dtab[0x000ffec0u] = sub_004fd1d0;
-    g_dtab[0x000ffef0u] = sub_004ed0b0;
-    g_dtab[0x000fff60u] = sub_019f80c0;
+    g_dtab[0x000ffef0u] = sub_0052aa40;
+    g_dtab[0x000fff60u] = sub_0052ea70;
     g_dtab[0x000fffd0u] = sub_019fdef0;
     g_dtab[0x00100040u] = sub_0049e790;
     g_dtab[0x001000b0u] = sub_00485c50;
@@ -31867,7 +31891,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x001003c0u] = sub_00556180;
     g_dtab[0x001005e0u] = sub_01a0ba50;
     g_dtab[0x00100780u] = sub_0052aa00;
-    g_dtab[0x001007f0u] = sub_019f80c0;
+    g_dtab[0x001007f0u] = sub_0052ea70;
     g_dtab[0x00100860u] = sub_0052cb10;
     g_dtab[0x001008d0u] = sub_004cd370;
     g_dtab[0x00100950u] = sub_01a10720;
@@ -31929,7 +31953,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0011a5c0u] = sub_019fcb70;
     g_dtab[0x0011aed0u] = sub_004313f0;
     g_dtab[0x0011b070u] = sub_00530380;
-    g_dtab[0x0011b240u] = sub_004a09f0;
+    g_dtab[0x0011b240u] = sub_00431420;
     g_dtab[0x0011b490u] = sub_019fb6f0;
     g_dtab[0x0011e230u] = sub_01a08320;
     g_dtab[0x0011e9eau] = sub_0053ab46;
@@ -31941,8 +31965,8 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00121480u] = sub_01bca057;
     g_dtab[0x00121500u] = sub_004fe720;
     g_dtab[0x001215a0u] = sub_019fde30;
-    g_dtab[0x00121690u] = sub_004fbe40;
-    g_dtab[0x00121770u] = sub_01a0b970;
+    g_dtab[0x00121690u] = sub_0050ab40;
+    g_dtab[0x00121770u] = sub_0050ae30;
     g_dtab[0x00121860u] = sub_0054aa60;
     g_dtab[0x00122e70u] = sub_00437730;
     g_dtab[0x00122f70u] = sub_00900f00;
@@ -31984,7 +32008,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0012a700u] = sub_019ff7e0;
     g_dtab[0x0012a7a0u] = sub_01a0f900;
     g_dtab[0x0012a800u] = sub_00430c10;
-    g_dtab[0x0012a930u] = sub_01a0f900;
+    g_dtab[0x0012a930u] = sub_0052b7a0;
     g_dtab[0x0012aa70u] = sub_01a07b60;
     g_dtab[0x0012abb0u] = sub_01a1a1a0;
     g_dtab[0x0012ae70u] = sub_01a0d470;
@@ -31996,7 +32020,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0012b890u] = sub_00402bc0;
     g_dtab[0x0012b8b0u] = sub_004f4390;
     g_dtab[0x0012b8f0u] = sub_00557c30;
-    g_dtab[0x0012b950u] = sub_005015f0;
+    g_dtab[0x0012b950u] = sub_0052b530;
     g_dtab[0x0012bab0u] = sub_0053c7d0;
     g_dtab[0x0012bb70u] = sub_019f9fd0;
     g_dtab[0x0012bce0u] = sub_00501790;
@@ -32008,7 +32032,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0012c050u] = sub_01c15034;
     g_dtab[0x0012c200u] = sub_01a08e90;
     g_dtab[0x0012c290u] = sub_01a1a120;
-    g_dtab[0x0012c2e0u] = sub_00549480;
+    g_dtab[0x0012c2e0u] = sub_0052c330;
     g_dtab[0x0012c350u] = sub_004a6f70;
     g_dtab[0x0012c3a0u] = sub_01a0ad10;
     g_dtab[0x0012c690u] = sub_019f4580;
@@ -32025,7 +32049,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0012e140u] = sub_01c1c035;
     g_dtab[0x0012e280u] = sub_019fa3c0;
     g_dtab[0x0012e390u] = sub_01a0ab90;
-    g_dtab[0x0012e470u] = sub_005015f0;
+    g_dtab[0x0012e470u] = sub_0052b530;
     g_dtab[0x0012e650u] = sub_01e4f0c3;
     g_dtab[0x0012eb70u] = sub_019fa2f0;
     g_dtab[0x0012ebe0u] = sub_004f2e70;
@@ -32089,7 +32113,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00132080u] = sub_004ae9b0;
     g_dtab[0x001320a0u] = sub_01a0b600;
     g_dtab[0x00132110u] = sub_00417cd0;
-    g_dtab[0x00132140u] = sub_019f80c0;
+    g_dtab[0x00132140u] = sub_0052ea70;
     g_dtab[0x001321b0u] = sub_004aed70;
     g_dtab[0x001321d0u] = sub_0052b950;
     g_dtab[0x001324a0u] = sub_01a10490;
@@ -32313,7 +32337,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0013f670u] = sub_00536c70;
     g_dtab[0x0013f6f0u] = sub_01a052b0;
     g_dtab[0x0013f8c0u] = sub_01a17b10;
-    g_dtab[0x0013f970u] = sub_0053a106;
+    g_dtab[0x0013f970u] = sub_005b8410;
     g_dtab[0x0013fb0au] = sub_005010f6;
     g_dtab[0x0013fb70u] = sub_01a02bf0;
     g_dtab[0x0013fc00u] = sub_00533980;
@@ -32384,7 +32408,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x001475a0u] = sub_00473d20;
     g_dtab[0x001476b0u] = sub_01a05a20;
     g_dtab[0x00147790u] = sub_01a17650;
-    g_dtab[0x001478d0u] = sub_00540980;
+    g_dtab[0x001478d0u] = sub_00547150;
     g_dtab[0x00147960u] = sub_019f9540;
     g_dtab[0x00147ab0u] = sub_01a02760;
     g_dtab[0x00147d60u] = sub_00528010;
@@ -32401,7 +32425,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00149730u] = sub_004a25c0;
     g_dtab[0x001497c0u] = sub_005698b0;
     g_dtab[0x001499b0u] = sub_01a087b0;
-    g_dtab[0x00149a20u] = sub_01a087b0;
+    g_dtab[0x00149a20u] = sub_0054a9b0;
     g_dtab[0x00149a50u] = sub_00548ac0;
     g_dtab[0x00149ae0u] = sub_01a026a0;
     g_dtab[0x00149b40u] = sub_01a12ef0;
@@ -32463,7 +32487,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x001553a0u] = sub_00493300;
     g_dtab[0x001553d0u] = sub_004e9060;
     g_dtab[0x00155400u] = sub_005303f0;
-    g_dtab[0x00155430u] = sub_0052da20;
+    g_dtab[0x00155430u] = sub_00545f80;
     g_dtab[0x00155460u] = sub_0049cec0;
     g_dtab[0x001554a0u] = sub_0049d800;
     g_dtab[0x001554e0u] = sub_004f3200;
@@ -32491,7 +32515,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00155e60u] = sub_01a08000;
     g_dtab[0x00155ef0u] = sub_01a194b0;
     g_dtab[0x001560b0u] = sub_01a14730;
-    g_dtab[0x001561b0u] = sub_00500f00;
+    g_dtab[0x001561b0u] = sub_004285b0;
     g_dtab[0x00156210u] = sub_00564ac0;
     g_dtab[0x00156290u] = sub_01a05220;
     g_dtab[0x00156300u] = sub_01a16c20;
@@ -32542,7 +32566,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0015e6d0u] = sub_01a1a860;
     g_dtab[0x0015e770u] = sub_004c58c0;
     g_dtab[0x0015e7c0u] = sub_00547160;
-    g_dtab[0x0015e810u] = sub_004a8d60;
+    g_dtab[0x0015e810u] = sub_00556710;
     g_dtab[0x0015e850u] = sub_0045f230;
     g_dtab[0x0015e890u] = sub_004c8520;
     g_dtab[0x0015e920u] = sub_004df740;
@@ -32563,7 +32587,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x0015f7e0u] = sub_019fbe40;
     g_dtab[0x0015f8a0u] = sub_019fd9b0;
     g_dtab[0x0015f950u] = sub_004a6400;
-    g_dtab[0x0015f970u] = sub_01c17000;
+    g_dtab[0x0015f970u] = sub_00557de0;
     g_dtab[0x0015ffe3u] = sub_00430c41;
     g_dtab[0x001601a0u] = sub_00402380;
     g_dtab[0x00160270u] = sub_00485bf0;
@@ -32572,7 +32596,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00160380u] = sub_019f71a0;
     g_dtab[0x00160630u] = sub_004f99d0;
     g_dtab[0x00160960u] = sub_006d0ae0;
-    g_dtab[0x001609f0u] = sub_01a1a860;
+    g_dtab[0x001609f0u] = sub_0055f6d0;
     g_dtab[0x00160a20u] = sub_004de5c0;
     g_dtab[0x00160f50u] = sub_005380b0;
     g_dtab[0x00160f83u] = sub_005010b6;
@@ -32583,7 +32607,7 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00162d20u] = sub_01a07660;
     g_dtab[0x00162f30u] = sub_01a09ac0;
     g_dtab[0x00163770u] = sub_0053f0c0;
-    g_dtab[0x00163840u] = sub_004f5370;
+    g_dtab[0x00163840u] = sub_0055f6a0;
     g_dtab[0x00163860u] = sub_005458a0;
     g_dtab[0x001638e0u] = sub_00466440;
     g_dtab[0x00163900u] = sub_01a0e820;
@@ -32633,11 +32657,11 @@ static void fntab_init_trampolines(void) {
     g_dtab[0x00166050u] = sub_004cb720;
     g_dtab[0x00167083u] = sub_0053b11d;
     g_dtab[0x00167800u] = sub_01a0d020;
-    g_dtab[0x001678e0u] = sub_00466440;
-    g_dtab[0x00167900u] = sub_01a0e820;
+    g_dtab[0x001678e0u] = sub_005648e0;
+    g_dtab[0x00167900u] = sub_00564900;
     g_dtab[0x00167920u] = sub_004c9110;
     g_dtab[0x00167950u] = sub_00501800;
-    g_dtab[0x00167980u] = sub_01a16b40;
+    g_dtab[0x00167980u] = sub_00564be0;
     g_dtab[0x00167a70u] = sub_01a15e40;
     g_dtab[0x00167e73u] = sub_004fc88e;
     g_dtab[0x00168590u] = sub_019f9ea0;
@@ -33016,7 +33040,6 @@ void fntab_init(void) {
     fntab_init_chunk_11();
     fntab_init_chunk_12();
 }
-
 
 void dispatch_indirect(struct CPU *c, uint32_t addr) {
     uint32_t off = addr - DISPATCH_TEXT_BASE;
@@ -34233,8 +34256,10 @@ void dispatch_indirect(struct CPU *c, uint32_t addr) {
     case 0x01f4fa9du: sub_01f4fa9d(c); return;
     default:
         c->eip = addr;
+#ifndef __wasm__
         fprintf(stderr, "[DISPATCH] Unresolved indirect target: 0x%08x (esp=0x%08x [esp]=0x%08x)\n", addr, c->esp, MR32(c->esp));
         fflush(stderr);
+#endif
         return;
     }
 }

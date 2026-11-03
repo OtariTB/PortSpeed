@@ -33,6 +33,7 @@ from capstone import Cs, CS_ARCH_X86, CS_MODE_32, CS_OP_IMM, CS_OP_MEM, CS_OP_RE
 from capstone.x86 import *
 
 from tools.clean_drm import EXPECTED_NFS_EXE_SHA256, parse_text_section
+from tools.manual_overrides import MANUAL_RECOVERIES
 from tools.trampoline_analyzer import parse_pe_sections, va_to_offset
 
 # Register lookups
@@ -1005,7 +1006,17 @@ class InstructionLifter:
                 return [f"{{ int64_t _p = (int64_t)(int32_t){eax} * (int64_t)(int32_t)({E(0)}); {eax} = (uint32_t)_p; {edx} = (uint32_t)(_p >> 32); {cf} = {of} = ((int64_t)(int32_t)_p != _p); }}"]
             if len(o) == 2:
                 return [f"{{ int64_t _p = (int64_t)(int32_t)({E(0)}) * (int64_t)(int32_t)({E(1)}); {cf} = {of} = ((int64_t)(int32_t)_p != _p); {W(0, '(uint32_t)_p')} }}"]
-            return [f"{{ int64_t _p = (int64_t)(int32_t)({E(1)}) * (int64_t)(int32_t)({E(2)}); {cf} = {of} = ((int64_t)(int32_t)_p != _p); {W(0, '(uint32_t)_p')} }}"]
+            return [f"{{ int64_t _p = (int64_t)(int32_t)({E(1)}) * (int64_t)(int32_t)({E(2)}); {cf} = {of} = ((int64_t)(int32_t)_p != _p); {W(0, '(uint32_t)_p')} }}"]
+
+        if m == "mul":
+            cf, of = self._reg_name("cf"), self._reg_name("of")
+            eax, edx = self._reg_name("eax"), self._reg_name("edx")
+            if bits == 32:
+                return [f"{{ uint64_t _p = (uint64_t){eax} * (uint64_t)({E(0)}); {eax} = (uint32_t)_p; {edx} = (uint32_t)(_p >> 32); {cf} = {of} = ({edx} != 0); }}"]
+            elif bits == 16:
+                return [f"{{ uint32_t _p = ({eax} & 0xffffu) * ({E(0)} & 0xffffu); {eax} = ({eax} & 0xffff0000u) | (_p & 0xffffu); {edx} = ({edx} & 0xffff0000u) | ((_p >> 16) & 0xffffu); {cf} = {of} = ((_p >> 16) != 0); }}"]
+            else:
+                return [f"{{ uint32_t _p = ({eax} & 0xffu) * ({E(0)} & 0xffu); {eax} = ({eax} & 0xffff0000u) | (_p & 0xffffu); {cf} = {of} = ((_p >> 8) != 0); }}"]
 
         if m in ("shl", "sal", "shr", "sar"):
             cnt = E(1) if len(o) > 1 else "1u"
@@ -1113,6 +1124,10 @@ class FunctionLifter:
         old_use_rg = self.lifter.use_rg
         self.lifter.use_rg = enable_lregs
 
+        if func_entry in MANUAL_RECOVERIES:
+            self.lifter.use_rg = old_use_rg
+            return MANUAL_RECOVERIES[func_entry]
+
         if func_entry == 0x00828ebc:
             self.lifter.use_rg = old_use_rg
             return (
